@@ -40,4 +40,4 @@ def test_health_db_down_returns_503(monkeypatch) -> None:
     monkeypatch.setattr(health, "get_engine", lambda: _FakeEngine(fail=True))
     resp = TestClient(app).get("/health")
     assert resp.status_code == 503
-    assert resp.json()["detail"]["error"]["code"] == "db_unavailable"
+    assert resp.json()["error"]["code"] == "db_unavailable"

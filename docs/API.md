@@ -5,8 +5,10 @@ REST/JSON. Todas as rotas (exceto `/auth/*` e `/webhooks/*`) exigem `Authorizati
 ## Auth
 | Método | Rota | Descrição | FR |
 |---|---|---|---|
-| POST | `/auth/register` | Cria usuário | FR-001 |
-| POST | `/auth/login` | Retorna JWT | FR-002 |
+| POST | `/auth/register` | Cria usuário (201; nunca retorna senha/hash) | FR-001 |
+| POST | `/auth/login` | Retorna `access_token` + `refresh_token` (JWT) | FR-002 |
+| POST | `/auth/refresh` | Troca um `refresh_token` válido por novo `access_token` | FR-002 |
+| GET | `/me` | Dados do usuário autenticado (rota privada de exemplo) | FR-002 |
 
 ## Conexões
 | Método | Rota | Descrição | FR |

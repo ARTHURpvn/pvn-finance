@@ -21,6 +21,12 @@ class Settings(BaseSettings):
     database_url: str
     app_env: str = "development"
 
+    # Autenticação / JWT (F2)
+    jwt_secret: str
+    jwt_algorithm: str = "HS256"
+    jwt_access_expire_minutes: int = 60
+    jwt_refresh_expire_minutes: int = 60 * 24 * 30  # 30 dias
+
 
 @lru_cache
 def get_settings() -> Settings:
