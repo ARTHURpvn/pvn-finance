@@ -17,7 +17,9 @@ from app.api.health import router as health_router
 from app.api.me import router as me_router
 from app.api.rules import router as rules_router
 from app.api.transactions import router as transactions_router
+from app.api.webhooks import router as webhooks_router
 from app.config import get_settings
+from app.logging_config import setup_logging
 
 
 def _register_exception_handlers(app: FastAPI) -> None:
@@ -60,6 +62,7 @@ def _configure_cors(app: FastAPI) -> None:
 
 
 def create_app() -> FastAPI:
+    setup_logging()
     app = FastAPI(title="Consolida API", version="0.1.0")
     _configure_cors(app)
     _register_exception_handlers(app)
@@ -72,6 +75,7 @@ def create_app() -> FastAPI:
     app.include_router(categories_router)
     app.include_router(rules_router)
     app.include_router(dashboard_router)
+    app.include_router(webhooks_router)
     return app
 
 
