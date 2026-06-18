@@ -32,5 +32,13 @@ services:
       timeout: 5s
       retries: 5
 
+  worker:
+    build: ./api
+    env_file: .env
+    depends_on:
+      db:
+        condition: service_healthy
+    command: ["uv", "run", "--no-dev", "python", "-m", "app.worker"]
+
 volumes:
   pgdata:

@@ -1,9 +1,11 @@
 """Adapter SQLAlchemy do repositório de conexões (escopado por user_id)."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.domain.connection import Connection, ConnectionStatus
@@ -73,6 +75,18 @@ class SqlConnectionRepository:
             select(ConnectionModel)
             .where(ConnectionModel.user_id == user_id)
             .order_by(ConnectionModel.created_at)
+        )
+        return [self._to_domain(m) for m in self._session.scalars(stmt)]
+
+    def list_due(self, older_than: datetime) -> list[Connection]:
+        """Conexões ativas a sincronizar: sem sync ou com sync mais antigo
+        que ``older_than`` (varredura do worker, todos os usuários)."""
+        stmt = select(ConnectionModel).where(
+            ConnectionModel.status == ConnectionStatus.ATIVA.value,
+            or_(
+                ConnectionModel.last_sync_at.is_(None),
+                ConnectionModel.last_sync_at < older_than,
+            ),
         )
         return [self._to_domain(m) for m in self._session.scalars(stmt)]
 

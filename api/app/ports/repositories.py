@@ -3,6 +3,8 @@
 Os adapters SQLAlchemy em infrastructure satisfazem estes contratos
 estruturalmente (Protocol), mantendo a aplicação livre de SQLAlchemy."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Protocol
 from uuid import UUID
@@ -31,6 +33,7 @@ class ConnectionRepository(Protocol):
         self, provider: str, provider_item_id: str
     ) -> Connection | None: ...
     def list(self, user_id: UUID) -> list[Connection]: ...
+    def list_due(self, older_than: datetime) -> list[Connection]: ...
     def set_status(self, connection_id: UUID, status: ConnectionStatus) -> None: ...
     def mark_synced(
         self, connection_id: UUID, when: datetime, *, status: ConnectionStatus = ...
