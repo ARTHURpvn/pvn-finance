@@ -11,6 +11,7 @@ from app.api.accounts import router as accounts_router
 from app.api.auth import router as auth_router
 from app.api.categories import router as categories_router
 from app.api.connections import router as connections_router
+from app.api.dashboard import router as dashboard_router
 from app.api.errors import error_body
 from app.api.health import router as health_router
 from app.api.me import router as me_router
@@ -70,6 +71,7 @@ def create_app() -> FastAPI:
     app.include_router(transactions_router)
     app.include_router(categories_router)
     app.include_router(rules_router)
+    app.include_router(dashboard_router)
     return app
 
 
