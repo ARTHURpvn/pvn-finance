@@ -5,7 +5,7 @@ Nenhum schema de saída inclui senha ou hash (NFR-001)."""
 from datetime import date, datetime
 from uuid import UUID
 
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class RegisterRequest(BaseModel):
@@ -142,3 +142,25 @@ class RuleCreate(BaseModel):
 class RecategorizeRequest(BaseModel):
     category_id: UUID
     create_rule: bool = False
+
+
+# ---- Dashboard (F8) ------------------------------------------------------
+
+
+class DashboardSummary(BaseModel):
+    received: str
+    spent: str
+    net: str
+
+
+class CategorySpendResponse(BaseModel):
+    category: str
+    total: str
+
+
+class TimelinePointResponse(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    month: str
+    inflow: str = Field(serialization_alias="in")
+    outflow: str = Field(serialization_alias="out")
