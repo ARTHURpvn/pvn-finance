@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     pluggy_client_secret: str | None = None
     pluggy_base_url: str = "https://api.pluggy.ai"
 
+    # CORS — origens permitidas (csv) ou "*". Em produção, restrinja.
+    cors_origins: str = "*"
+
 
 @lru_cache
 def get_settings() -> Settings:
