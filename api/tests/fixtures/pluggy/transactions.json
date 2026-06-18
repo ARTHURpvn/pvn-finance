@@ -1,0 +1,36 @@
+{
+  "total": 2,
+  "totalPages": 1,
+  "page": 1,
+  "results": [
+    {
+      "id": "a8534c85-53ce-4f21-94d7-50e9d2ee4957",
+      "description": "COMPRA TESOURO DIRETO",
+      "descriptionRaw": "* PROV * COMPRA TESOURO DIRETO CLIENTES",
+      "currencyCode": "BRL",
+      "amount": -212.45,
+      "date": "2026-01-15T00:00:00.000Z",
+      "balance": 4439.40,
+      "category": "Investimentos",
+      "accountId": "a658c848-e475-457b-8565-d1fffba127c4",
+      "status": "POSTED",
+      "type": "DEBIT"
+    },
+    {
+      "id": "05c693bf-c196-47ea-a28c-8251d6bb8a06",
+      "description": "Salário",
+      "descriptionRaw": "PAGAMENTO SALARIO ACME",
+      "currencyCode": "BRL",
+      "amount": 5000.00,
+      "date": "2026-01-05T00:00:00.000Z",
+      "balance": 9439.40,
+      "category": "Income",
+      "accountId": "a658c848-e475-457b-8565-d1fffba127c4",
+      "status": "POSTED",
+      "type": "CREDIT",
+      "merchant": {
+        "name": "ACME LTDA"
+      }
+    }
+  ]
+}

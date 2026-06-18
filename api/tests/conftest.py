@@ -13,6 +13,7 @@ os.environ.setdefault(
     "postgresql+psycopg://consolida:consolida@localhost:5432/consolida",
 )
 os.environ.setdefault("JWT_SECRET", "test-secret-not-for-prod-0123456789")
+os.environ.setdefault("VAULT_KEY", "gNJ16n_LeMvqKdM_Fzseu-F548qW99DlkFjjAgSezSY=")
 
 from collections.abc import Iterator  # noqa: E402
 
