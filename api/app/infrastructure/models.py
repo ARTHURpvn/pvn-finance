@@ -11,6 +11,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Integer,
     LargeBinary,
     Numeric,
     String,
@@ -193,3 +194,25 @@ class SyncLogModel(Base):
     )
     status: Mapped[str] = mapped_column(String(30), nullable=False)
     error: Mapped[str | None] = mapped_column(String(1000), nullable=True)
+
+
+class RuleModel(Base):
+    __tablename__ = "rules"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    match_type: Mapped[str] = mapped_column(String(20), nullable=False)
+    pattern: Mapped[str] = mapped_column(String(255), nullable=False)
+    category_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("categories.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    priority: Mapped[int] = mapped_column(Integer, nullable=False, server_default="100")

@@ -105,3 +105,40 @@ class TransactionsPage(BaseModel):
     page: int
     page_size: int
     total: int
+
+
+# ---- Categorização (F7) --------------------------------------------------
+
+
+class CategoryResponse(BaseModel):
+    id: UUID
+    name: str
+    kind: str
+    is_system: bool
+    parent_id: UUID | None = None
+
+
+class CategoryCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=100)
+    kind: str = Field(pattern="^(income|expense|transfer)$")
+    parent_id: UUID | None = None
+
+
+class RuleResponse(BaseModel):
+    id: UUID
+    match_type: str
+    pattern: str
+    category_id: UUID
+    priority: int
+
+
+class RuleCreate(BaseModel):
+    match_type: str = Field(pattern="^(contains|equals|regex)$")
+    pattern: str = Field(min_length=1, max_length=255)
+    category_id: UUID
+    priority: int = 100
+
+
+class RecategorizeRequest(BaseModel):
+    category_id: UUID
+    create_rule: bool = False
