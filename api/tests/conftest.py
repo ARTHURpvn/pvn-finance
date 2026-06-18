@@ -38,6 +38,14 @@ def _schema() -> Iterator[None]:
     command.downgrade(config, "base")
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter() -> None:
+    """Isola o rate limiter in-memory entre testes."""
+    from app.api.rate_limit import get_auth_limiter
+
+    get_auth_limiter().clear()
+
+
 @pytest.fixture
 def db_session(_schema) -> Iterator[Session]:
     with get_sessionmaker()() as session:

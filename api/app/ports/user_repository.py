@@ -21,3 +21,7 @@ class UserRepository(Protocol):
     def get_by_id(self, user_id: UUID) -> UserRecord | None:
         """Busca por id. None se não existir."""
         ...
+
+    def delete(self, user_id: UUID) -> bool:
+        """Exclui o usuário e, por cascata, todos os seus dados (LGPD)."""
+        ...

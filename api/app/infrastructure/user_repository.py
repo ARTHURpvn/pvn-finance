@@ -39,3 +39,13 @@ class SqlUserRepository:
     def get_by_id(self, user_id: UUID) -> UserRecord | None:
         model = self._session.get(UserModel, user_id)
         return self._to_record(model) if model else None
+
+    def delete(self, user_id: UUID) -> bool:
+        model = self._session.get(UserModel, user_id)
+        if model is None:
+            return False
+        # FKs com ondelete=CASCADE removem conexões, contas, transações,
+        # sync_logs, regras e categorias do usuário (LGPD / NFR-003).
+        self._session.delete(model)
+        self._session.commit()
+        return True

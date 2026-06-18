@@ -9,6 +9,7 @@ REST/JSON. Todas as rotas (exceto `/auth/*` e `/webhooks/*`) exigem `Authorizati
 | POST | `/auth/login` | Retorna `access_token` + `refresh_token` (JWT) | FR-002 |
 | POST | `/auth/refresh` | Troca um `refresh_token` válido por novo `access_token` | FR-002 |
 | GET | `/me` | Dados do usuário autenticado (rota privada de exemplo) | FR-002 |
+| DELETE | `/me` | Exclui o usuário e todos os seus dados (LGPD) | FR-006, NFR-003 |
 
 ## Conexões
 | Método | Rota | Descrição | FR |
