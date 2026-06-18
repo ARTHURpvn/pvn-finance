@@ -71,8 +71,13 @@ class PluggyAdapter:
     def _get_raw(
         self, path: str, params: dict[str, Any], headers: dict[str, str]
     ) -> httpx.Response:
+        # params vazio + path já com query (cursor) faz o httpx descartar a
+        # query; só repassamos params quando há algo.
+        kwargs: dict[str, Any] = {"headers": headers}
+        if params:
+            kwargs["params"] = params
         try:
-            return self._http.get(path, params=params, headers=headers)
+            return self._http.get(path, **kwargs)
         except httpx.TransportError as exc:
             raise RetryableAggregatorError(str(exc)) from exc
 
@@ -127,11 +132,29 @@ class PluggyAdapter:
         provider_account_id: str,
         since: date_type | None = None,
     ) -> list[ProviderTransaction]:
+        # Usa /v2/transactions (cursor): o /transactions v1 foi descontinuado
+        # pelo Pluggy (responde 410 Gone).
         params: dict[str, Any] = {"accountId": provider_account_id}
         if since is not None:
-            params["startDate"] = since.isoformat()
-        data = self._get("/transactions", params)
-        return [self._map_transaction(r) for r in data.get("results", [])]
+            params["dateFrom"] = since.isoformat()
+
+        data = self._get("/v2/transactions", params)
+        results: list[dict[str, Any]] = list(data.get("results", []))
+
+        next_query = data.get("next")
+        pages = 0
+        while next_query and pages < 100:
+            path = (
+                f"/v2/transactions{next_query}"
+                if next_query.startswith("?")
+                else next_query
+            )
+            data = self._get(path, {})
+            results.extend(data.get("results", []))
+            next_query = data.get("next")
+            pages += 1
+
+        return [self._map_transaction(r) for r in results]
 
     # ---- mapeamento -------------------------------------------------------
 
