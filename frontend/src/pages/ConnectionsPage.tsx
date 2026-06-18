@@ -11,7 +11,6 @@ import {
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { apiFetch } from '@/lib/api'
-import { useAuth } from '@/lib/auth'
 import type {
   Connection,
   ConnectTokenResponse,
@@ -42,7 +41,6 @@ function statusVariant(
 }
 
 export function ConnectionsPage() {
-  const { user, logout } = useAuth()
   const [connections, setConnections] = useState<Connection[]>([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
@@ -141,21 +139,8 @@ export function ConnectionsPage() {
   }
 
   return (
-    <div className="min-h-svh">
-      <header className="border-b">
-        <div className="max-w-3xl mx-auto flex items-center justify-between p-4">
-          <h1 className="text-lg font-semibold">Consolida</h1>
-          <div className="flex items-center gap-3 text-sm">
-            <span className="text-muted-foreground">{user?.email}</span>
-            <Button variant="ghost" size="sm" onClick={logout}>
-              Sair
-            </Button>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-3xl mx-auto p-4 space-y-4">
-        <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-semibold">Conexões bancárias</h2>
             <p className="text-sm text-muted-foreground">
@@ -223,7 +208,6 @@ export function ConnectionsPage() {
             ))}
           </div>
         )}
-      </main>
 
       {connect && (
         <PluggyConnect
