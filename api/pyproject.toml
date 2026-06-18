@@ -11,6 +11,9 @@ dependencies = [
     "alembic>=1.14",
     "psycopg[binary]>=3.2",
     "pydantic-settings>=2.7",
+    "pwdlib[argon2]>=0.3.0",
+    "pyjwt>=2.13.0",
+    "pydantic[email]>=2.13.4",
 ]
 
 [dependency-groups]
