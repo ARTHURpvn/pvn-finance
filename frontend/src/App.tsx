@@ -1,19 +1,24 @@
-import { Button } from '@/components/ui/button'
+import { Navigate, Route, Routes } from 'react-router-dom'
+import { ProtectedRoute } from '@/components/ProtectedRoute'
+import { ConnectionsPage } from '@/pages/ConnectionsPage'
+import { LoginPage } from '@/pages/LoginPage'
+import { RegisterPage } from '@/pages/RegisterPage'
 
 function App() {
   return (
-    <main className="min-h-svh flex flex-col items-center justify-center gap-6 p-8">
-      <div className="text-center space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight">Consolida</h1>
-        <p className="text-muted-foreground">
-          Agregador financeiro pessoal — bootstrap (F1) com shadcn/ui.
-        </p>
-      </div>
-      <div className="flex gap-3">
-        <Button>Conectar banco</Button>
-        <Button variant="outline">Ver dashboard</Button>
-      </div>
-    </main>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/register" element={<RegisterPage />} />
+      <Route
+        path="/"
+        element={
+          <ProtectedRoute>
+            <ConnectionsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   )
 }
 

@@ -26,4 +26,18 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
     },
   },
+  {
+    // Arquivos de contexto/lib expõem provider + hook no mesmo módulo.
+    files: ['src/lib/**/*.{ts,tsx}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    // Páginas fazem data-fetching no mount (setState assíncrono pós-await).
+    files: ['src/pages/**/*.tsx'],
+    rules: {
+      'react-hooks/set-state-in-effect': 'off',
+    },
+  },
 ])
