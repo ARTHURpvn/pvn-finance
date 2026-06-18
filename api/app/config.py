@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     sync_interval_minutes: int = 60  # intervalo entre varreduras
     sync_stale_minutes: int = 60  # conexão é "devida" se sync mais antigo que isso
 
+    # Rate limiting de /auth/* (F10) — in-memory; usar Redis ao escalar.
+    auth_rate_limit_max: int = 20
+    auth_rate_limit_window_seconds: int = 60
+
 
 @lru_cache
 def get_settings() -> Settings:

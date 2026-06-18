@@ -1,9 +1,10 @@
 """Rotas de autenticação: registro, login e refresh de token."""
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Depends, status
 
 from app.api.deps import AuthServiceDep
 from app.api.errors import api_error
+from app.api.rate_limit import auth_rate_limit
 from app.api.schemas import (
     AccessTokenResponse,
     LoginRequest,
@@ -14,7 +15,9 @@ from app.api.schemas import (
 )
 from app.application.auth_service import EmailAlreadyExists, InvalidCredentials
 
-router = APIRouter(prefix="/auth", tags=["auth"])
+router = APIRouter(
+    prefix="/auth", tags=["auth"], dependencies=[Depends(auth_rate_limit)]
+)
 
 
 @router.post(
