@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     jwt_access_expire_minutes: int = 60
     jwt_refresh_expire_minutes: int = 60 * 24 * 30  # 30 dias
 
+    # Cofre de credenciais (F4 / ADR-005) — chave Fernet, separada do banco.
+    vault_key: str
+
+    # Agregador Pluggy (F4) — opcionais; app sobe sem eles.
+    pluggy_client_id: str | None = None
+    pluggy_client_secret: str | None = None
+    pluggy_base_url: str = "https://api.pluggy.ai"
+
 
 @lru_cache
 def get_settings() -> Settings:
