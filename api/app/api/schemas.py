@@ -2,7 +2,7 @@
 
 Nenhum schema de saída inclui senha ou hash (NFR-001)."""
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import BaseModel, EmailStr, Field
@@ -63,3 +63,45 @@ class ConnectionResponse(BaseModel):
 class SyncResultResponse(BaseModel):
     status: str
     imported: int
+
+
+# ---- Contas & transações (F6) -------------------------------------------
+
+
+class AccountResponse(BaseModel):
+    id: UUID
+    connection_id: UUID
+    type: str
+    name: str
+    currency: str
+    balance: str  # decimal como string (convenção da API)
+    balance_updated_at: datetime | None = None
+
+
+class AccountSummary(BaseModel):
+    total: str  # soma excluindo cartão de crédito (RN-02)
+    credit_card: str
+
+
+class AccountsResponse(BaseModel):
+    accounts: list[AccountResponse]
+    summary: AccountSummary
+
+
+class TransactionResponse(BaseModel):
+    id: UUID
+    account_id: UUID
+    date: date
+    amount: str
+    direction: str
+    description: str
+    counterpart: str | None = None
+    category_id: UUID | None = None
+    category_name: str | None = None
+
+
+class TransactionsPage(BaseModel):
+    items: list[TransactionResponse]
+    page: int
+    page_size: int
+    total: int
