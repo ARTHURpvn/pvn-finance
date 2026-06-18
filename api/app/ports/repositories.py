@@ -9,6 +9,7 @@ from uuid import UUID
 
 from app.domain.account import Account
 from app.domain.connection import Connection, ConnectionStatus
+from app.domain.rule import MatchType, Rule
 from app.domain.transaction import Transaction
 from app.ports.financial_data_port import ProviderAccount
 
@@ -51,6 +52,24 @@ class TransactionRepository(Protocol):
         connection_id: UUID,
         items: list[tuple[Transaction, dict[str, Any] | None]],
     ) -> int: ...
+    def get(self, transaction_id: UUID, user_id: UUID) -> Transaction | None: ...
+    def set_category(
+        self, transaction_id: UUID, user_id: UUID, category_id: UUID | None
+    ) -> bool: ...
+
+
+class RuleRepository(Protocol):
+    def list_for_user(self, user_id: UUID) -> list[Rule]: ...
+    def add(
+        self,
+        *,
+        user_id: UUID,
+        match_type: MatchType,
+        pattern: str,
+        category_id: UUID,
+        priority: int = 100,
+    ) -> Rule: ...
+    def delete(self, rule_id: UUID, user_id: UUID) -> bool: ...
 
 
 class SyncLogRepository(Protocol):

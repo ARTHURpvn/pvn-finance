@@ -69,6 +69,23 @@ class SqlTransactionRepository:
         items = [self._to_domain(m) for m in self._session.scalars(stmt)]
         return items, int(total or 0)
 
+    def get(self, transaction_id: UUID, user_id: UUID) -> Transaction | None:
+        model = self._session.get(TransactionModel, transaction_id)
+        if model is None or model.user_id != user_id:
+            return None
+        return self._to_domain(model)
+
+    def set_category(
+        self, transaction_id: UUID, user_id: UUID, category_id: UUID | None
+    ) -> bool:
+        """RN-04: recategorização altera SOMENTE category_id."""
+        model = self._session.get(TransactionModel, transaction_id)
+        if model is None or model.user_id != user_id:
+            return False
+        model.category_id = category_id
+        self._session.commit()
+        return True
+
     def existing_provider_ids(self, connection_id: UUID) -> set[str]:
         """Ids de transações já persistidas na conexão (base do dedupe RN-05)."""
         stmt = select(TransactionModel.provider_transaction_id).where(

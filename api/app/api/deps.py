@@ -10,13 +10,16 @@ from sqlalchemy.orm import Session
 from app.adapters.pluggy import PluggyAdapter
 from app.api.errors import api_error
 from app.application.auth_service import AuthService
+from app.application.categorization_service import CategorizationService
 from app.application.connection_service import ConnectionService
 from app.application.sync_service import SyncService
 from app.config import get_settings
 from app.domain.user import User
 from app.infrastructure.account_repository import SqlAccountRepository
+from app.infrastructure.category_repository import SqlCategoryRepository
 from app.infrastructure.connection_repository import SqlConnectionRepository
 from app.infrastructure.db import get_session
+from app.infrastructure.rule_repository import SqlRuleRepository
 from app.infrastructure.security import Argon2PasswordHasher, JwtTokenService
 from app.infrastructure.sync_log_repository import SqlSyncLogRepository
 from app.infrastructure.transaction_repository import SqlTransactionRepository
@@ -96,6 +99,10 @@ def get_sync_service(session: SessionDep, adapter: AdapterDep) -> SyncService:
         accounts=SqlAccountRepository(session),
         transactions=SqlTransactionRepository(session),
         sync_logs=SqlSyncLogRepository(session),
+        categorization=CategorizationService(
+            categories=SqlCategoryRepository(session),
+            rules=SqlRuleRepository(session),
+        ),
     )
 
 

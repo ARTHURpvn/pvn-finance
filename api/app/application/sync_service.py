@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
+from app.application.categorization_service import CategorizationService
 from app.application.normalization import normalize_transaction
 from app.application.retry import with_retry
 from app.domain.connection import ConnectionStatus
@@ -47,6 +48,7 @@ class SyncService:
         accounts: AccountRepository,
         transactions: TransactionRepository,
         sync_logs: SyncLogRepository,
+        categorization: CategorizationService | None = None,
         base_delay: float = 0.5,
     ) -> None:
         self._adapter = adapter
@@ -54,6 +56,7 @@ class SyncService:
         self._accounts = accounts
         self._transactions = transactions
         self._sync_logs = sync_logs
+        self._categorization = categorization
         self._base_delay = base_delay
 
     def sync(self, *, connection_id: UUID, user_id: UUID) -> SyncResult:
@@ -92,6 +95,11 @@ class SyncService:
             lambda: self._adapter.fetch_accounts(provider_item_id=provider_item_id),
             base_delay=self._base_delay,
         )
+        categorizer = (
+            self._categorization.build_for_user(user_id)
+            if self._categorization is not None
+            else None
+        )
         imported = 0
         for provider_account in provider_accounts:
             account = self._accounts.upsert(
@@ -116,6 +124,11 @@ class SyncService:
                     user_id=user_id,
                     account_id=account.id,
                     transaction_id=uuid4(),
+                    category_id=(
+                        categorizer(pt.description, pt.provider_category)
+                        if categorizer is not None
+                        else None
+                    ),
                 )
                 for pt in provider_txs
             ]
