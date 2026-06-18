@@ -7,12 +7,21 @@ from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
+from app.adapters.pluggy import PluggyAdapter
 from app.api.errors import api_error
 from app.application.auth_service import AuthService
+from app.application.connection_service import ConnectionService
+from app.application.sync_service import SyncService
+from app.config import get_settings
 from app.domain.user import User
+from app.infrastructure.account_repository import SqlAccountRepository
+from app.infrastructure.connection_repository import SqlConnectionRepository
 from app.infrastructure.db import get_session
 from app.infrastructure.security import Argon2PasswordHasher, JwtTokenService
+from app.infrastructure.sync_log_repository import SqlSyncLogRepository
+from app.infrastructure.transaction_repository import SqlTransactionRepository
 from app.infrastructure.user_repository import SqlUserRepository
+from app.ports.financial_data_port import FinancialDataPort
 from app.ports.security import TokenError
 
 _bearer = HTTPBearer(auto_error=False)
@@ -52,3 +61,43 @@ def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_financial_adapter() -> FinancialDataPort:
+    settings = get_settings()
+    if not settings.pluggy_client_id or not settings.pluggy_client_secret:
+        raise api_error(
+            code="aggregator_not_configured",
+            message="Agregador (Pluggy) não configurado",
+            status_code=503,
+        )
+    return PluggyAdapter(
+        client_id=settings.pluggy_client_id,
+        client_secret=settings.pluggy_client_secret,
+        base_url=settings.pluggy_base_url,
+    )
+
+
+AdapterDep = Annotated[FinancialDataPort, Depends(get_financial_adapter)]
+
+
+def get_connection_service(
+    session: SessionDep, adapter: AdapterDep
+) -> ConnectionService:
+    return ConnectionService(
+        adapter=adapter, connections=SqlConnectionRepository(session)
+    )
+
+
+def get_sync_service(session: SessionDep, adapter: AdapterDep) -> SyncService:
+    return SyncService(
+        adapter=adapter,
+        connections=SqlConnectionRepository(session),
+        accounts=SqlAccountRepository(session),
+        transactions=SqlTransactionRepository(session),
+        sync_logs=SqlSyncLogRepository(session),
+    )
+
+
+ConnectionServiceDep = Annotated[ConnectionService, Depends(get_connection_service)]
+SyncServiceDep = Annotated[SyncService, Depends(get_sync_service)]

@@ -10,7 +10,12 @@ from typing import Any
 
 import httpx
 
-from app.ports.financial_data_port import ProviderAccount, ProviderTransaction
+from app.ports.financial_data_port import (
+    AggregatorError,
+    ProviderAccount,
+    ProviderTransaction,
+    RetryableAggregatorError,
+)
 
 #: subtype do Pluggy → AccountType do domínio (valor string).
 _SUBTYPE_TO_TYPE: dict[str, str] = {
@@ -20,9 +25,8 @@ _SUBTYPE_TO_TYPE: dict[str, str] = {
 }
 _DEFAULT_ACCOUNT_TYPE = "payment"
 
-
-class PluggyError(Exception):
-    """Falha na comunicação com o Pluggy."""
+#: Status HTTP transitórios que justificam retry com backoff (NFR-004).
+_RETRYABLE_STATUS = {429, 500, 502, 503, 504, 529}
 
 
 def _parse_date(value: str) -> date_type:
@@ -44,14 +48,46 @@ class PluggyAdapter:
         self._http = http_client or httpx.Client(base_url=base_url, timeout=30.0)
         self._api_key: str | None = None
 
+    # ---- transporte / tradução de erros -----------------------------------
+
+    @staticmethod
+    def _handle(resp: httpx.Response) -> httpx.Response:
+        if resp.status_code in _RETRYABLE_STATUS:
+            raise RetryableAggregatorError(f"pluggy retornou {resp.status_code}")
+        try:
+            resp.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise AggregatorError(str(exc)) from exc
+        return resp
+
+    def _post(
+        self, path: str, *, json: dict[str, Any], headers: dict[str, str] | None = None
+    ) -> httpx.Response:
+        try:
+            return self._http.post(path, json=json, headers=headers)
+        except httpx.TransportError as exc:
+            raise RetryableAggregatorError(str(exc)) from exc
+
+    def _get_raw(
+        self, path: str, params: dict[str, Any], headers: dict[str, str]
+    ) -> httpx.Response:
+        try:
+            return self._http.get(path, params=params, headers=headers)
+        except httpx.TransportError as exc:
+            raise RetryableAggregatorError(str(exc)) from exc
+
     # ---- autenticação -----------------------------------------------------
 
     def _authenticate(self) -> str:
-        resp = self._http.post(
-            "/auth",
-            json={"clientId": self._client_id, "clientSecret": self._client_secret},
+        resp = self._handle(
+            self._post(
+                "/auth",
+                json={
+                    "clientId": self._client_id,
+                    "clientSecret": self._client_secret,
+                },
+            )
         )
-        resp.raise_for_status()
         self._api_key = resp.json()["apiKey"]
         return self._api_key
 
@@ -62,13 +98,12 @@ class PluggyAdapter:
         return {"X-API-KEY": self._api_key}
 
     def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
-        resp = self._http.get(path, params=params, headers=self._headers())
+        resp = self._get_raw(path, params, self._headers())
         if resp.status_code == httpx.codes.UNAUTHORIZED:
             # apiKey pode ter expirado — reautentica uma vez.
             self._api_key = None
-            resp = self._http.get(path, params=params, headers=self._headers())
-        resp.raise_for_status()
-        return resp.json()
+            resp = self._get_raw(path, params, self._headers())
+        return self._handle(resp).json()
 
     # ---- widget -----------------------------------------------------------
 
@@ -76,8 +111,7 @@ class PluggyAdapter:
         """Emite o accessToken do Pluggy Connect (FR-003). Com `item_id`,
         habilita o fluxo de reautenticação (FR-005)."""
         body = {"itemId": item_id} if item_id else {}
-        resp = self._http.post("/connect_token", json=body, headers=self._headers())
-        resp.raise_for_status()
+        resp = self._handle(self._post("/connect_token", json=body, headers=self._headers()))
         return resp.json()["accessToken"]
 
     # ---- FinancialDataPort ------------------------------------------------

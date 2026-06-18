@@ -1,10 +1,24 @@
 """Modelos SQLAlchemy (mapeamento ORM). Schema espelha docs/DATA_MODEL.md."""
 
 import uuid
+from datetime import date as date_type
 from datetime import datetime
+from decimal import Decimal
+from typing import Any
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String, func, text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    LargeBinary,
+    Numeric,
+    String,
+    UniqueConstraint,
+    func,
+    text,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.infrastructure.db import Base
@@ -47,3 +61,135 @@ class CategoryModel(Base):
     is_system: Mapped[bool] = mapped_column(
         Boolean, nullable=False, server_default=text("false")
     )
+
+
+class ConnectionModel(Base):
+    __tablename__ = "connections"
+    __table_args__ = (
+        UniqueConstraint(
+            "provider", "provider_item_id", name="uq_connections_provider_item"
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    provider: Mapped[str] = mapped_column(String(50), nullable=False)
+    provider_item_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    institution_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    encrypted_secret: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    consent_expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_sync_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
+class AccountModel(Base):
+    __tablename__ = "accounts"
+    __table_args__ = (
+        UniqueConstraint(
+            "connection_id",
+            "provider_account_id",
+            name="uq_accounts_connection_provider",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    connection_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("connections.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    provider_account_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped[str] = mapped_column(String(30), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False)
+    balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    balance_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
+class TransactionModel(Base):
+    __tablename__ = "transactions"
+    __table_args__ = (
+        UniqueConstraint(
+            "connection_id",
+            "provider_transaction_id",
+            name="uq_transactions_connection_provider",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("accounts.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    connection_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("connections.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    provider_transaction_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    date: Mapped[date_type] = mapped_column(Date, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    direction: Mapped[str] = mapped_column(String(3), nullable=False)
+    description: Mapped[str] = mapped_column(String(500), nullable=False)
+    counterpart: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    category_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("categories.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+    raw: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+
+
+class SyncLogModel(Base):
+    __tablename__ = "sync_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    connection_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("connections.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    started_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    finished_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    status: Mapped[str] = mapped_column(String(30), nullable=False)
+    error: Mapped[str | None] = mapped_column(String(1000), nullable=True)
