@@ -14,6 +14,7 @@ REST/JSON. Todas as rotas (exceto `/auth/*` e `/webhooks/*`) exigem `Authorizati
 | Método | Rota | Descrição | FR |
 |---|---|---|---|
 | POST | `/connections` | Inicia conexão; retorna token/URL do widget do agregador | FR-003 |
+| POST | `/connections/register` | Registra a conexão após o widget (recebe `provider_item_id`) | FR-003 |
 | GET | `/connections` | Lista conexões com status | FR-004 |
 | GET | `/connections/{id}` | Detalhe de uma conexão | FR-004 |
 | POST | `/connections/{id}/sync` | Dispara sync sob demanda | FR-007, FR-022 |

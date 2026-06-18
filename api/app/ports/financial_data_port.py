@@ -12,6 +12,14 @@ from decimal import Decimal
 from typing import Any, Protocol
 
 
+class AggregatorError(Exception):
+    """Falha não-recuperável ao falar com o agregador."""
+
+
+class RetryableAggregatorError(AggregatorError):
+    """Falha transitória (429/529/5xx/rede) — elegível a retry com backoff."""
+
+
 @dataclass(frozen=True, slots=True)
 class ProviderAccount:
     """Conta na forma do agregador (pré-normalização)."""
@@ -38,8 +46,11 @@ class ProviderTransaction:
 
 
 class FinancialDataPort(Protocol):
-    """Leitura de dados financeiros via agregador. (Emissão de connect
-    token/widget chega na F4; sync incremental usa ``since`` na F5.)"""
+    """Contrato do agregador: emissão de connect token + leitura de dados."""
+
+    def create_connect_token(self, *, item_id: str | None = None) -> str:
+        """Emite o token do widget de conexão (com item_id = reauth)."""
+        ...
 
     def fetch_accounts(self, *, provider_item_id: str) -> list[ProviderAccount]:
         """Lista as contas de uma conexão."""

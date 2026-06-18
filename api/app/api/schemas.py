@@ -37,3 +37,29 @@ class UserResponse(BaseModel):
     id: UUID
     email: EmailStr
     created_at: datetime
+
+
+# ---- Conexões (F5) -------------------------------------------------------
+
+
+class ConnectTokenResponse(BaseModel):
+    connect_token: str
+
+
+class RegisterConnectionRequest(BaseModel):
+    provider_item_id: str = Field(min_length=1, max_length=255)
+    institution_name: str = Field(min_length=1, max_length=255)
+
+
+class ConnectionResponse(BaseModel):
+    id: UUID
+    provider: str
+    institution_name: str
+    status: str
+    consent_expires_at: datetime | None = None
+    last_sync_at: datetime | None = None
+
+
+class SyncResultResponse(BaseModel):
+    status: str
+    imported: int
