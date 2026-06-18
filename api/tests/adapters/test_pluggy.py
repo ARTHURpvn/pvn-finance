@@ -32,7 +32,7 @@ def _handler(request: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"accessToken": "connect-abc"})
     if path == "/accounts":
         return httpx.Response(200, json=_load("accounts.json"))
-    if path == "/transactions":
+    if path == "/v2/transactions":
         return httpx.Response(200, json=_load("transactions.json"))
     return httpx.Response(404)
 
@@ -68,6 +68,48 @@ def test_fetch_transactions_maps_signed_amount_and_date() -> None:
     assert credit.amount == Decimal("5000.00")
     assert credit.counterpart == "ACME LTDA"
     assert credit.raw is not None  # payload original preservado
+
+
+def test_fetch_transactions_follows_cursor_pagination() -> None:
+    page1 = {
+        "results": [
+            {
+                "id": "p1",
+                "description": "A",
+                "amount": -1,
+                "date": "2026-01-01T00:00:00.000Z",
+                "type": "DEBIT",
+            }
+        ],
+        "next": "?accountId=acc&after=cursor1",
+    }
+    page2 = {
+        "results": [
+            {
+                "id": "p2",
+                "description": "B",
+                "amount": 2,
+                "date": "2026-01-02T00:00:00.000Z",
+                "type": "CREDIT",
+            }
+        ],
+        "next": None,
+    }
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth":
+            return httpx.Response(200, json={"apiKey": "k"})
+        if request.url.path == "/v2/transactions":
+            body = page2 if "after=cursor1" in str(request.url) else page1
+            return httpx.Response(200, json=body)
+        return httpx.Response(404)
+
+    adapter = _make_adapter(handler)
+    txs = adapter.fetch_transactions(
+        provider_item_id="i", provider_account_id="acc"
+    )
+
+    assert [t.provider_transaction_id for t in txs] == ["p1", "p2"]
 
 
 def test_create_connect_token() -> None:
