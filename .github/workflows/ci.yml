@@ -41,7 +41,7 @@ jobs:
       - name: Migrations
         run: uv run alembic upgrade head
       - name: Tests
-        run: uv run pytest
+        run: uv run pytest --cov=app/domain --cov-fail-under=80
 
   frontend:
     runs-on: ubuntu-latest
