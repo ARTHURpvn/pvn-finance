@@ -16,7 +16,7 @@ export function Card({
         color: dark ? 'var(--dark-ink)' : 'var(--ink)',
         border: dark ? 'none' : '1px solid var(--line)',
         borderRadius: 18,
-        padding: '18px 20px',
+        padding: '24px 26px',
         boxShadow: 'var(--shadow-sm)',
         ...style,
       }}

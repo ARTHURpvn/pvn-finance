@@ -91,7 +91,7 @@ export function TransactionDetailModal({
                 {tx.category_name ?? 'Sem categoria'} · {formatDate(tx.date)}
               </div>
             </div>
-            <div style={{ ...display, fontSize: 24, color: tx.direction === 'in' ? 'var(--ok)' : 'var(--ink)' }}>
+            <div style={{ ...display, fontSize: 24, color: tx.direction === 'in' ? 'var(--ok)' : 'var(--danger)' }}>
               {money(tx.amount)}
             </div>
           </div>

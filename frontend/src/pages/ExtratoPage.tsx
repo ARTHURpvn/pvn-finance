@@ -95,7 +95,7 @@ export function ExtratoPage() {
                 <span style={{ fontWeight: 700, fontSize: 15 }}>{formatDate(day)}</span>
                 <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
                   total do dia{' '}
-                  <b style={{ ...display, color: dayTotal >= 0 ? 'var(--ok)' : 'var(--ink)' }}>
+                  <b style={{ ...display, color: dayTotal >= 0 ? 'var(--ok)' : 'var(--danger)' }}>
                     {money(dayTotal)}
                   </b>
                 </span>
@@ -130,7 +130,7 @@ export function ExtratoPage() {
                     <span style={{ flex: 1.2, fontSize: 12.5, color: 'var(--ink-soft)' }}>
                       {t.category_name ?? 'Sem categoria'}
                     </span>
-                    <span style={{ flex: 1, textAlign: 'right', ...display, fontWeight: 600, fontSize: 14, color: income ? 'var(--ok)' : 'var(--ink)' }}>
+                    <span style={{ flex: 1, textAlign: 'right', ...display, fontWeight: 600, fontSize: 14, color: income ? 'var(--ok)' : 'var(--danger)' }}>
                       {money(t.amount)}
                     </span>
                   </div>
