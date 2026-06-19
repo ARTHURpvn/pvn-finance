@@ -3,79 +3,106 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* ===== Design tokens (Claude Design — "fin.") ===== */
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --bg: #f5f6fb;
+  --panel: #ffffff;
+  --panel-2: #f3f4fa;
+  --fill: #eef0f7;
+  --ink: #15162e;
+  --ink-soft: #6b6d85;
+  --line: #e6e7f0;
+  --line-2: #d9dbe7;
+  --accent: #4f46e5;
+  --accent-ink: #ffffff;
+  --accent2: #0ea5a4;
+  --ok: #0e9f6e;
+  --danger: #e5484d;
+  --gold: #f59e0b;
+  --info: #2f7df0;
+  --pos: #0e9f6e;
+  --dark-card: #1b1d3a;
+  --dark-ink: #f3f3ff;
+  --dark-soft: #b9bad8;
+  --shadow-sm: 0 1px 2px rgba(20, 22, 50, 0.06);
+  --shadow: 0 12px 30px rgba(20, 22, 50, 0.1);
+
+  --sans: "Manrope", system-ui, sans-serif;
+  --display: "Space Grotesk", system-ui, sans-serif;
 }
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+[data-theme="dark"] {
+  --bg: #0b0d15;
+  --panel: #151826;
+  --panel-2: #10131e;
+  --fill: #1d2030;
+  --ink: #edeef7;
+  --ink-soft: #9698b4;
+  --line: #252839;
+  --line-2: #2f3346;
+  --accent: #7c74ff;
+  --accent-ink: #ffffff;
+  --accent2: #2dd4cf;
+  --ok: #34d399;
+  --danger: #ff5c6a;
+  --gold: #fbbf24;
+  --info: #5b9cf8;
+  --pos: #34d399;
+  --dark-card: #080a12;
+  --dark-ink: #f3f3ff;
+  --dark-soft: #b9bad8;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
 }
 
-@theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
+* {
+  box-sizing: border-box;
 }
 
-@layer base {
-  * {
-    @apply border-border outline-ring/50;
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-2);
+  border-radius: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
   }
-  body {
-    @apply bg-background text-foreground;
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pop {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

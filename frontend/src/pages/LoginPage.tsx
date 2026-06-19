@@ -1,18 +1,27 @@
 import { useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { AuthShell } from '@/components/AuthShell'
 import { ApiError } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
+
+const labelStyle: React.CSSProperties = {
+  fontSize: 12.5,
+  color: 'var(--ink-soft)',
+  marginBottom: 6,
+  fontWeight: 600,
+}
+const inputStyle: React.CSSProperties = {
+  width: '100%',
+  border: '1.5px solid var(--line-2)',
+  borderRadius: 12,
+  padding: '13px 15px',
+  fontSize: 14,
+  color: 'var(--ink)',
+  background: 'var(--panel-2)',
+  fontFamily: 'var(--sans)',
+  outline: 'none',
+}
 
 export function LoginPage() {
   const { login } = useAuth()
@@ -28,55 +37,90 @@ export function LoginPage() {
       await login(email, password)
       navigate('/')
     } catch (error) {
-      const message =
-        error instanceof ApiError ? error.message : 'Falha ao entrar'
-      toast.error(message)
+      toast.error(error instanceof ApiError ? error.message : 'Falha ao entrar')
     } finally {
       setSubmitting(false)
     }
   }
 
   return (
-    <div className="min-h-svh flex items-center justify-center p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Entrar no Consolida</CardTitle>
-          <CardDescription>Acesse seu painel financeiro</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Entrando…' : 'Entrar'}
-            </Button>
-          </form>
-          <p className="text-sm text-muted-foreground mt-4 text-center">
-            Não tem conta?{' '}
-            <Link to="/register" className="underline">
-              Criar conta
-            </Link>
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthShell>
+      <form
+        onSubmit={handleSubmit}
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          animation: 'fadeUp .3s ease',
+        }}
+      >
+        <div
+          style={{
+            fontFamily: 'var(--display)',
+            fontWeight: 700,
+            fontSize: 28,
+            letterSpacing: '-.5px',
+          }}
+        >
+          Bem-vindo de volta
+        </div>
+        <div>
+          <div style={labelStyle}>E-mail</div>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="voce@email.com"
+            required
+            style={inputStyle}
+          />
+        </div>
+        <div>
+          <div style={labelStyle}>Senha</div>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            required
+            style={inputStyle}
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={submitting}
+          style={{
+            marginTop: 4,
+            cursor: 'pointer',
+            fontFamily: 'var(--sans)',
+            fontWeight: 700,
+            fontSize: 15,
+            padding: 14,
+            border: 'none',
+            borderRadius: 12,
+            background: 'var(--accent)',
+            color: 'var(--accent-ink)',
+            opacity: submitting ? 0.7 : 1,
+          }}
+        >
+          {submitting ? 'Entrando…' : 'Entrar →'}
+        </button>
+        <div
+          style={{
+            textAlign: 'center',
+            fontSize: 13.5,
+            color: 'var(--ink-soft)',
+          }}
+        >
+          Não tem conta?{' '}
+          <Link
+            to="/register"
+            style={{ color: 'var(--accent)', fontWeight: 600 }}
+          >
+            Criar conta
+          </Link>
+        </div>
+      </form>
+    </AuthShell>
   )
 }
