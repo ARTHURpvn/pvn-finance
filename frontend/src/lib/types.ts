@@ -65,3 +65,17 @@ export interface TransactionsPage {
   page_size: number
   total: number
 }
+
+export interface Category {
+  id: string
+  name: string
+  kind: 'income' | 'expense' | 'transfer'
+  is_system: boolean
+  parent_id: string | null
+}
+
+export interface DashboardSummary {
+  received: string
+  spent: string
+  net: string
+}

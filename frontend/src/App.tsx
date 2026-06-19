@@ -1,17 +1,18 @@
 import type { ReactNode } from 'react'
 import { Navigate, Route, Routes } from 'react-router-dom'
-import { Layout } from '@/components/Layout'
+import { AppLayout } from '@/components/AppLayout'
 import { ProtectedRoute } from '@/components/ProtectedRoute'
-import { AccountsPage } from '@/pages/AccountsPage'
-import { ConnectionsPage } from '@/pages/ConnectionsPage'
+import { ComingSoonPage } from '@/pages/ComingSoonPage'
+import { ConfigPage } from '@/pages/ConfigPage'
+import { DashboardPage } from '@/pages/DashboardPage'
+import { ExtratoPage } from '@/pages/ExtratoPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
-import { TransactionsPage } from '@/pages/TransactionsPage'
 
 function Protected({ children }: { children: ReactNode }) {
   return (
     <ProtectedRoute>
-      <Layout>{children}</Layout>
+      <AppLayout>{children}</AppLayout>
     </ProtectedRoute>
   )
 }
@@ -21,17 +22,18 @@ function App() {
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/accounts" element={<Protected><AccountsPage /></Protected>} />
+      <Route path="/" element={<Protected><DashboardPage /></Protected>} />
       <Route
-        path="/transactions"
-        element={<Protected><TransactionsPage /></Protected>}
+        path="/investimentos"
+        element={<Protected><ComingSoonPage title="Investimentos" /></Protected>}
       />
+      <Route path="/extrato" element={<Protected><ExtratoPage /></Protected>} />
       <Route
-        path="/connections"
-        element={<Protected><ConnectionsPage /></Protected>}
+        path="/metas"
+        element={<Protected><ComingSoonPage title="Metas e orçamento" /></Protected>}
       />
-      <Route path="/" element={<Navigate to="/accounts" replace />} />
-      <Route path="*" element={<Navigate to="/accounts" replace />} />
+      <Route path="/config" element={<Protected><ConfigPage /></Protected>} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
