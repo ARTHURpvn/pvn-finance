@@ -49,7 +49,7 @@ export function ExtratoPage() {
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1
 
   return (
-    <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 1040 }}>
+    <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: 1040 }}>
       <div style={{ ...display, fontSize: 26 }}>Extrato</div>
 
       <div style={{ position: 'relative' }}>
@@ -100,37 +100,75 @@ export function ExtratoPage() {
                   </b>
                 </span>
               </div>
-              {items.map((t) => {
+              {items.map((t, idx) => {
                 const income = t.direction === 'in'
                 return (
                   <div
                     key={t.id}
                     onClick={() => setSelected(t)}
                     className="u-row"
-                    style={{ display: 'flex', alignItems: 'center', padding: '12px 18px', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '14px 18px',
+                      borderTop: idx === 0 ? 'none' : '1px solid var(--line)',
+                      cursor: 'pointer',
+                    }}
                   >
-                    <span style={{ flex: 2, display: 'flex', alignItems: 'center', gap: 11 }}>
-                      <span
+                    <span
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 12,
+                        background: income
+                          ? 'color-mix(in srgb, var(--ok) 14%, transparent)'
+                          : 'var(--fill)',
+                        color: income ? 'var(--ok)' : 'var(--ink-soft)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {income ? <IconArrowIn size={18} /> : <IconArrowOut size={18} />}
+                    </span>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
                         style={{
-                          width: 34,
-                          height: 34,
-                          borderRadius: 10,
-                          background: income ? 'color-mix(in srgb, var(--ok) 14%, transparent)' : 'var(--fill)',
-                          color: income ? 'var(--ok)' : 'var(--ink-soft)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          flexShrink: 0,
+                          fontSize: 14,
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
                         }}
                       >
-                        {income ? <IconArrowIn size={17} /> : <IconArrowOut size={17} />}
-                      </span>
-                      <span style={{ fontSize: 14, fontWeight: 600 }}>{t.description}</span>
-                    </span>
-                    <span style={{ flex: 1.2, fontSize: 12.5, color: 'var(--ink-soft)' }}>
-                      {t.category_name ?? 'Sem categoria'}
-                    </span>
-                    <span style={{ flex: 1, textAlign: 'right', ...display, fontWeight: 600, fontSize: 14, color: income ? 'var(--ok)' : 'var(--danger)' }}>
+                        {t.description}
+                      </div>
+                      <div style={{ marginTop: 3 }}>
+                        <span
+                          style={{
+                            fontSize: 11.5,
+                            color: 'var(--ink-soft)',
+                            background: 'var(--fill)',
+                            padding: '2px 8px',
+                            borderRadius: 20,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {t.category_name ?? 'Sem categoria'}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        ...display,
+                        fontWeight: 700,
+                        fontSize: 15,
+                        whiteSpace: 'nowrap',
+                        color: income ? 'var(--ok)' : 'var(--danger)',
+                      }}
+                    >
                       {money(t.amount)}
                     </span>
                   </div>

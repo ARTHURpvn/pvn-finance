@@ -116,6 +116,7 @@ export function DashboardPage() {
         display: 'flex',
         flexDirection: 'column',
         gap: 18,
+        width: '100%',
         maxWidth: 1180,
       }}
     >
@@ -123,6 +124,7 @@ export function DashboardPage() {
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
         <div
+          className="u-card-hover"
           style={{
             flex: '1.5 1 280px',
             borderRadius: 18,
@@ -148,7 +150,7 @@ export function DashboardPage() {
           </div>
         </div>
 
-        <Card style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+        <Card className="u-card-hover" style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
           <span style={chip('var(--ok)')}>
             <IconArrowIn size={18} />
           </span>
@@ -160,7 +162,7 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <Card style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+        <Card className="u-card-hover" style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
           <span style={chip('var(--danger)')}>
             <IconArrowOut size={18} />
           </span>
@@ -174,7 +176,7 @@ export function DashboardPage() {
       </div>
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <Card style={{ flex: '1.6 1 340px', display: 'flex', flexDirection: 'column', height: 264 }}>
+        <Card className="u-card-hover" style={{ flex: '1.6 1 340px', display: 'flex', flexDirection: 'column', height: 264 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span style={{ fontWeight: 700, fontSize: 16 }}>Evolução (líquido mensal)</span>
             <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
@@ -182,7 +184,7 @@ export function DashboardPage() {
             </span>
           </div>
           {inflow.length > 0 ? (
-            <svg viewBox="0 0 460 150" preserveAspectRatio="none" style={{ width: '100%', flex: 1, marginTop: 8 }}>
+            <svg className="u-chartwrap" viewBox="0 0 460 150" preserveAspectRatio="none" style={{ width: '100%', flex: 1, marginTop: 8 }}>
               <defs>
                 <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.25" />
@@ -199,6 +201,23 @@ export function DashboardPage() {
                 strokeLinejoin="round"
                 points={linePoints(inflow)}
               />
+              {linePoints(inflow)
+                .split(' ')
+                .map((pt) => {
+                  const [x, y] = pt.split(',')
+                  return (
+                    <circle
+                      key={pt}
+                      className="u-chart-dot"
+                      cx={x}
+                      cy={y}
+                      r={4}
+                      fill="var(--accent)"
+                      stroke="var(--panel)"
+                      strokeWidth="2"
+                    />
+                  )
+                })}
             </svg>
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-soft)', fontSize: 13 }}>
@@ -212,7 +231,7 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <Card style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <Card className="u-card-hover" style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span style={{ fontWeight: 700, fontSize: 16 }}>Onde foi o dinheiro</span>
             <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
@@ -222,6 +241,7 @@ export function DashboardPage() {
           {topCats.length > 0 ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
               <div
+                className="u-donut"
                 style={{
                   width: 116,
                   height: 116,
@@ -251,7 +271,7 @@ export function DashboardPage() {
               </div>
               <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {topCats.map((g, i) => (
-                  <div key={g.category} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
+                  <div key={g.category} className="u-legend" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
                     <span style={{ width: 9, height: 9, borderRadius: 3, background: PALETTE[i % PALETTE.length], flexShrink: 0 }} />
                     <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.category}</span>
                     <span style={{ color: 'var(--ink-soft)', fontWeight: 600 }}>

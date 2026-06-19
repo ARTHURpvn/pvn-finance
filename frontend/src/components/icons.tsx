@@ -134,3 +134,8 @@ export const IconPlus = (p: { size?: number }) => (
     <line x1="5" y1="12" x2="19" y2="12" />
   </Base>
 )
+export const IconChevronDown = (p: { size?: number }) => (
+  <Base {...p}>
+    <path d="M6 9l6 6 6-6" />
+  </Base>
+)

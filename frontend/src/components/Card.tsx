@@ -4,13 +4,16 @@ export function Card({
   children,
   style,
   dark,
+  className,
 }: {
   children: ReactNode
   style?: CSSProperties
   dark?: boolean
+  className?: string
 }) {
   return (
     <div
+      className={className}
       style={{
         background: dark ? 'var(--dark-card)' : 'var(--panel)',
         color: dark ? 'var(--dark-ink)' : 'var(--ink)',

@@ -103,7 +103,7 @@ export function ConfigPage() {
   }
 
   return (
-    <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 880 }}>
+    <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 18, width: '100%', maxWidth: 880 }}>
       <div style={{ ...display, fontSize: 26 }}>Configurações</div>
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

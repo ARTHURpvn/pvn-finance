@@ -176,3 +176,38 @@ input {
   border-radius: 50%;
   animation: spin 0.7s linear infinite;
 }
+
+/* Donut: leve zoom no hover */
+.u-donut {
+  transition: transform 0.2s ease;
+}
+.u-donut:hover {
+  transform: scale(1.04);
+}
+
+/* Pontos do gráfico de linha: aparecem/crescem no hover do card */
+.u-chart-dot {
+  opacity: 0;
+  transition:
+    r 0.15s ease,
+    opacity 0.15s ease;
+}
+.u-chartwrap:hover .u-chart-dot {
+  opacity: 1;
+}
+
+/* Linha de legenda do donut */
+.u-legend {
+  border-radius: 8px;
+  padding: 3px 6px;
+  margin: 0 -6px;
+  transition: background-color 0.12s ease;
+}
+.u-legend:hover {
+  background: var(--fill);
+}
+
+/* Select estilizado: cor do chevron acompanha foco */
+.u-select:focus + span {
+  color: var(--accent);
+}

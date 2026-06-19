@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
-import { IconArrowIn, IconArrowOut } from '@/components/icons'
+import { IconArrowIn, IconArrowOut, IconChevronDown } from '@/components/icons'
 import { display } from '@/lib/styles'
 import { apiFetch } from '@/lib/api'
 import { formatDate } from '@/lib/format'
@@ -98,27 +98,48 @@ export function TransactionDetailModal({
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600 }}>Categoria</span>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              className="u-field"
-              style={{
-                border: '1.5px solid var(--line-2)',
-                borderRadius: 11,
-                padding: '11px 13px',
-                fontSize: 14,
-                background: 'var(--panel-2)',
-                color: 'var(--ink)',
-                fontFamily: 'var(--sans)',
-              }}
-            >
-              <option value="">Selecione…</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <div style={{ position: 'relative' }}>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="u-field u-select"
+                style={{
+                  width: '100%',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  border: '1.5px solid var(--line-2)',
+                  borderRadius: 11,
+                  padding: '12px 38px 12px 13px',
+                  fontSize: 14,
+                  background: 'var(--panel-2)',
+                  color: 'var(--ink)',
+                  fontFamily: 'var(--sans)',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="">Selecione…</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <span
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--ink-soft)',
+                  pointerEvents: 'none',
+                  display: 'flex',
+                }}
+              >
+                <IconChevronDown size={18} />
+              </span>
+            </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-soft)', marginTop: 2 }}>
               <input type="checkbox" checked={createRule} onChange={(e) => setCreateRule(e.target.checked)} />
               Criar regra para transações parecidas
