@@ -47,7 +47,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
               letterSpacing: '-.5px',
             }}
           >
-            fin<span style={{ color: 'var(--accent)' }}>.</span>
+            pvn<span style={{ color: 'var(--accent)' }}>.</span>
           </div>
           <div>
             <div

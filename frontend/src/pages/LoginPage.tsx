@@ -72,6 +72,7 @@ export function LoginPage() {
             onChange={(e) => setEmail(e.target.value)}
             placeholder="voce@email.com"
             required
+            className="u-field"
             style={inputStyle}
           />
         </div>
@@ -83,12 +84,14 @@ export function LoginPage() {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
             required
+            className="u-field"
             style={inputStyle}
           />
         </div>
         <button
           type="submit"
           disabled={submitting}
+          className="u-solid"
           style={{
             marginTop: 4,
             cursor: 'pointer',

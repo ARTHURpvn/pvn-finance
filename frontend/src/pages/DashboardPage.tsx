@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Card } from '@/components/Card'
+import { IconArrowIn, IconArrowOut } from '@/components/icons'
 import { display } from '@/lib/styles'
 import { apiFetch } from '@/lib/api'
 import { formatDate } from '@/lib/format'
@@ -200,10 +201,10 @@ export function DashboardPage() {
         </div>
         {recent && recent.items.length > 0 ? (
           recent.items.map((t) => (
-            <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 8px', borderRadius: 10 }}>
+            <div key={t.id} className="u-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 8px', borderRadius: 10 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--fill)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>
-                  {t.direction === 'in' ? '↓' : '↑'}
+                <span style={{ width: 36, height: 36, borderRadius: 10, background: t.direction === 'in' ? 'color-mix(in srgb, var(--ok) 14%, transparent)' : 'var(--fill)', color: t.direction === 'in' ? 'var(--ok)' : 'var(--ink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {t.direction === 'in' ? <IconArrowIn size={17} /> : <IconArrowOut size={17} />}
                 </span>
                 <span>
                   <span style={{ fontSize: 14, fontWeight: 600, display: 'block' }}>{t.description}</span>

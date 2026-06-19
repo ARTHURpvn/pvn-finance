@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { IconArrowIn, IconArrowOut } from '@/components/icons'
 import { display } from '@/lib/styles'
 import { apiFetch } from '@/lib/api'
 import { formatDate } from '@/lib/format'
@@ -81,8 +82,8 @@ export function TransactionDetailModal({
         </div>
         <div style={{ padding: '22px 22px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--fill)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
-              {tx.direction === 'in' ? '↓' : '↑'}
+            <span style={{ width: 52, height: 52, borderRadius: 14, background: tx.direction === 'in' ? 'color-mix(in srgb, var(--ok) 14%, transparent)' : 'var(--fill)', color: tx.direction === 'in' ? 'var(--ok)' : 'var(--ink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {tx.direction === 'in' ? <IconArrowIn size={24} /> : <IconArrowOut size={24} />}
             </span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 18, fontWeight: 700 }}>{tx.description}</div>
@@ -100,6 +101,7 @@ export function TransactionDetailModal({
             <select
               value={categoryId}
               onChange={(e) => setCategoryId(e.target.value)}
+              className="u-field"
               style={{
                 border: '1.5px solid var(--line-2)',
                 borderRadius: 11,
@@ -126,6 +128,7 @@ export function TransactionDetailModal({
           <button
             onClick={save}
             disabled={saving || !categoryId}
+            className="u-solid"
             style={{
               cursor: 'pointer',
               fontFamily: 'var(--sans)',
