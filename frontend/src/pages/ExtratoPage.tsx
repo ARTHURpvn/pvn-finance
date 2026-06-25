@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Card } from '@/components/Card'
-import { display } from '@/lib/styles'
 import { TransactionDetailModal } from '@/components/TransactionDetailModal'
+import { IconArrowIn, IconArrowOut, IconSearch } from '@/components/icons'
 import { apiFetch } from '@/lib/api'
 import { formatDate } from '@/lib/format'
+import { display } from '@/lib/styles'
 import { useUi } from '@/lib/ui'
 import type { Transaction, TransactionsPage } from '@/lib/types'
 
@@ -48,30 +49,39 @@ export function ExtratoPage() {
   const totalPages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1
 
   return (
-    <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 1040 }}>
+    <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 16, width: '100%', maxWidth: 1040 }}>
       <div style={{ ...display, fontSize: 26 }}>Extrato</div>
 
-      <input
-        value={q}
-        onChange={(e) => {
-          setPage(1)
-          setQ(e.target.value)
-        }}
-        placeholder="🔍  buscar transação…"
-        style={{
-          border: '1.5px solid var(--line-2)',
-          borderRadius: 12,
-          padding: '12px 15px',
-          fontSize: 14,
-          color: 'var(--ink)',
-          background: 'var(--panel)',
-          fontFamily: 'var(--sans)',
-          outline: 'none',
-        }}
-      />
+      <div style={{ position: 'relative' }}>
+        <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--ink-soft)', display: 'flex' }}>
+          <IconSearch size={17} />
+        </span>
+        <input
+          value={q}
+          onChange={(e) => {
+            setPage(1)
+            setQ(e.target.value)
+          }}
+          placeholder="Buscar transação…"
+          className="u-field"
+          style={{
+            width: '100%',
+            border: '1.5px solid var(--line-2)',
+            borderRadius: 12,
+            padding: '12px 15px 12px 40px',
+            fontSize: 14,
+            color: 'var(--ink)',
+            background: 'var(--panel)',
+            fontFamily: 'var(--sans)',
+            outline: 'none',
+          }}
+        />
+      </div>
 
       {loading ? (
-        <p style={{ color: 'var(--ink-soft)' }}>Carregando…</p>
+        <div style={{ display: 'flex', justifyContent: 'center', padding: 40 }}>
+          <div className="u-spinner" />
+        </div>
       ) : groups.length === 0 ? (
         <Card style={{ textAlign: 'center', color: 'var(--ink-soft)', padding: '40px 20px' }}>
           Nenhuma transação encontrada.
@@ -85,31 +95,85 @@ export function ExtratoPage() {
                 <span style={{ fontWeight: 700, fontSize: 15 }}>{formatDate(day)}</span>
                 <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
                   total do dia{' '}
-                  <b style={{ ...display, color: dayTotal >= 0 ? 'var(--ok)' : 'var(--ink)' }}>
+                  <b style={{ ...display, color: dayTotal >= 0 ? 'var(--ok)' : 'var(--danger)' }}>
                     {money(dayTotal)}
                   </b>
                 </span>
               </div>
-              {items.map((t) => (
-                <div
-                  key={t.id}
-                  onClick={() => setSelected(t)}
-                  style={{ display: 'flex', alignItems: 'center', padding: '12px 18px', borderBottom: '1px solid var(--line)', cursor: 'pointer' }}
-                >
-                  <span style={{ flex: 2, display: 'flex', alignItems: 'center', gap: 11 }}>
-                    <span style={{ width: 34, height: 34, borderRadius: 10, background: 'var(--fill)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>
-                      {t.direction === 'in' ? '↓' : '↑'}
+              {items.map((t, idx) => {
+                const income = t.direction === 'in'
+                return (
+                  <div
+                    key={t.id}
+                    onClick={() => setSelected(t)}
+                    className="u-row"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 14,
+                      padding: '14px 18px',
+                      borderTop: idx === 0 ? 'none' : '1px solid var(--line)',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <span
+                      style={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 12,
+                        background: income
+                          ? 'color-mix(in srgb, var(--ok) 14%, transparent)'
+                          : 'var(--fill)',
+                        color: income ? 'var(--ok)' : 'var(--ink-soft)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexShrink: 0,
+                      }}
+                    >
+                      {income ? <IconArrowIn size={18} /> : <IconArrowOut size={18} />}
                     </span>
-                    <span style={{ fontSize: 14, fontWeight: 600 }}>{t.description}</span>
-                  </span>
-                  <span style={{ flex: 1.2, fontSize: 12.5, color: 'var(--ink-soft)' }}>
-                    {t.category_name ?? 'Sem categoria'}
-                  </span>
-                  <span style={{ flex: 1, textAlign: 'right', ...display, fontWeight: 600, fontSize: 14, color: t.direction === 'in' ? 'var(--ok)' : 'var(--ink)' }}>
-                    {money(t.amount)}
-                  </span>
-                </div>
-              ))}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div
+                        style={{
+                          fontSize: 14,
+                          fontWeight: 600,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {t.description}
+                      </div>
+                      <div style={{ marginTop: 3 }}>
+                        <span
+                          style={{
+                            fontSize: 11.5,
+                            color: 'var(--ink-soft)',
+                            background: 'var(--fill)',
+                            padding: '2px 8px',
+                            borderRadius: 20,
+                            fontWeight: 600,
+                          }}
+                        >
+                          {t.category_name ?? 'Sem categoria'}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      style={{
+                        ...display,
+                        fontWeight: 700,
+                        fontSize: 15,
+                        whiteSpace: 'nowrap',
+                        color: income ? 'var(--ok)' : 'var(--danger)',
+                      }}
+                    >
+                      {money(t.amount)}
+                    </span>
+                  </div>
+                )
+              })}
             </Card>
           )
         })
@@ -118,13 +182,13 @@ export function ExtratoPage() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>{data?.total ?? 0} transações</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} style={pagBtn(page <= 1)}>
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="u-ghost" style={pagBtn(page <= 1)}>
             Anterior
           </button>
           <span style={{ fontSize: 13 }}>
             {page} / {totalPages}
           </span>
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} style={pagBtn(page >= totalPages)}>
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="u-ghost" style={pagBtn(page >= totalPages)}>
             Próxima
           </button>
         </div>

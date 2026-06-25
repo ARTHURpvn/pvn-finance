@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Card } from '@/components/Card'
+import { IconArrowIn, IconArrowOut } from '@/components/icons'
 import { display } from '@/lib/styles'
 import { apiFetch } from '@/lib/api'
 import { formatDate } from '@/lib/format'
@@ -54,6 +55,25 @@ function linePoints(values: number[], w = 460, h = 150, pad = 12): string {
     .join(' ')
 }
 
+function areaPoints(values: number[]): string {
+  const pts = linePoints(values)
+  if (!pts) return ''
+  return `0,150 ${pts} 460,150`
+}
+
+function chip(color: string): React.CSSProperties {
+  return {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    background: `color-mix(in srgb, ${color} 16%, transparent)`,
+    color,
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+  }
+}
+
 export function DashboardPage() {
   const { money } = useUi()
   const [accounts, setAccounts] = useState<AccountsResponse | null>(null)
@@ -96,43 +116,67 @@ export function DashboardPage() {
         display: 'flex',
         flexDirection: 'column',
         gap: 18,
+        width: '100%',
         maxWidth: 1180,
       }}
     >
       <div style={{ ...display, fontSize: 26 }}>Visão geral</div>
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <Card dark style={{ flex: '1.5 1 280px' }}>
-          <div style={{ fontSize: 13, color: 'var(--dark-soft)', fontWeight: 600 }}>
+        <div
+          className="u-card-hover"
+          style={{
+            flex: '1.5 1 280px',
+            borderRadius: 18,
+            padding: '24px 26px',
+            background:
+              'linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #9333ea 100%)',
+            color: '#fff',
+            boxShadow: '0 14px 32px rgba(79,70,229,.30)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+            justifyContent: 'center',
+          }}
+        >
+          <div style={{ fontSize: 13, fontWeight: 600, opacity: 0.85 }}>
             Patrimônio total
           </div>
-          <div style={{ ...display, fontSize: 40, lineHeight: 1.1 }}>
+          <div style={{ ...display, fontSize: 42, lineHeight: 1.05 }}>
             {money(accounts?.summary.total ?? '0')}
           </div>
-          <div style={{ fontSize: 13, color: 'var(--dark-soft)' }}>
-            cartão de crédito à parte: {money(accounts?.summary.credit_card ?? '0')}
+          <div style={{ fontSize: 12.5, opacity: 0.8 }}>
+            Cartão de crédito à parte: {money(accounts?.summary.credit_card ?? '0')}
+          </div>
+        </div>
+
+        <Card className="u-card-hover" style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+          <span style={chip('var(--ok)')}>
+            <IconArrowIn size={18} />
+          </span>
+          <div>
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>Entrou</div>
+            <div style={{ ...display, fontSize: 28, color: 'var(--ok)' }}>
+              {money(summary?.received ?? '0')}
+            </div>
           </div>
         </Card>
-        <Card style={{ flex: '1 1 160px' }}>
-          <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>
-            Entrou
-          </div>
-          <div style={{ ...display, fontSize: 30, color: 'var(--ok)' }}>
-            + {money(summary?.received ?? '0')}
-          </div>
-        </Card>
-        <Card style={{ flex: '1 1 160px' }}>
-          <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>
-            Saiu
-          </div>
-          <div style={{ ...display, fontSize: 30, color: 'var(--danger)' }}>
-            − {money(summary?.spent ?? '0')}
+
+        <Card className="u-card-hover" style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
+          <span style={chip('var(--danger)')}>
+            <IconArrowOut size={18} />
+          </span>
+          <div>
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>Saiu</div>
+            <div style={{ ...display, fontSize: 28, color: 'var(--danger)' }}>
+              {money(summary?.spent ?? '0')}
+            </div>
           </div>
         </Card>
       </div>
 
       <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-        <Card style={{ flex: '1.6 1 340px', display: 'flex', flexDirection: 'column', height: 248 }}>
+        <Card className="u-card-hover" style={{ flex: '1.6 1 340px', display: 'flex', flexDirection: 'column', height: 264 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span style={{ fontWeight: 700, fontSize: 16 }}>Evolução (líquido mensal)</span>
             <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
@@ -140,8 +184,15 @@ export function DashboardPage() {
             </span>
           </div>
           {inflow.length > 0 ? (
-            <svg viewBox="0 0 460 150" preserveAspectRatio="none" style={{ width: '100%', flex: 1, marginTop: 8 }}>
+            <svg className="u-chartwrap" viewBox="0 0 460 150" preserveAspectRatio="none" style={{ width: '100%', flex: 1, marginTop: 8 }}>
+              <defs>
+                <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.25" />
+                  <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
+                </linearGradient>
+              </defs>
               <line x1="0" y1="130" x2="460" y2="130" stroke="var(--line)" strokeWidth="1" />
+              <polygon fill="url(#area)" points={areaPoints(inflow)} />
               <polyline
                 fill="none"
                 stroke="var(--accent)"
@@ -150,6 +201,23 @@ export function DashboardPage() {
                 strokeLinejoin="round"
                 points={linePoints(inflow)}
               />
+              {linePoints(inflow)
+                .split(' ')
+                .map((pt) => {
+                  const [x, y] = pt.split(',')
+                  return (
+                    <circle
+                      key={pt}
+                      className="u-chart-dot"
+                      cx={x}
+                      cy={y}
+                      r={4}
+                      fill="var(--accent)"
+                      stroke="var(--panel)"
+                      strokeWidth="2"
+                    />
+                  )
+                })}
             </svg>
           ) : (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-soft)', fontSize: 13 }}>
@@ -163,22 +231,50 @@ export function DashboardPage() {
           </div>
         </Card>
 
-        <Card style={{ flex: '1 1 280px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <span style={{ fontWeight: 700, fontSize: 16 }}>Onde foi o dinheiro</span>
+        <Card className="u-card-hover" style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+            <span style={{ fontWeight: 700, fontSize: 16 }}>Onde foi o dinheiro</span>
+            <span style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
+              {money(summary?.spent ?? '0')}
+            </span>
+          </div>
           {topCats.length > 0 ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              <div style={{ position: 'relative', width: 104, height: 104, borderRadius: '50%', background: donut, flexShrink: 0 }}>
-                <div style={{ position: 'absolute', inset: 22, background: 'var(--panel)', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: 10, color: 'var(--ink-soft)' }}>gasto</span>
-                  <span style={{ ...display, fontSize: 14 }}>{money(summary?.spent ?? '0')}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 18 }}>
+              <div
+                className="u-donut"
+                style={{
+                  width: 116,
+                  height: 116,
+                  borderRadius: '50%',
+                  background: donut,
+                  flexShrink: 0,
+                  display: 'grid',
+                  placeItems: 'center',
+                }}
+              >
+                <div
+                  style={{
+                    width: 72,
+                    height: 72,
+                    background: 'var(--panel)',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 11,
+                    color: 'var(--ink-soft)',
+                    fontWeight: 600,
+                  }}
+                >
+                  {topCats.length} cat.
                 </div>
               </div>
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 7 }}>
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 9 }}>
                 {topCats.map((g, i) => (
-                  <div key={g.category} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
-                    <span style={{ width: 9, height: 9, borderRadius: 3, background: PALETTE[i % PALETTE.length] }} />
-                    <span style={{ flex: 1 }}>{g.category}</span>
-                    <span style={{ color: 'var(--ink-soft)' }}>
+                  <div key={g.category} className="u-legend" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5 }}>
+                    <span style={{ width: 9, height: 9, borderRadius: 3, background: PALETTE[i % PALETTE.length], flexShrink: 0 }} />
+                    <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{g.category}</span>
+                    <span style={{ color: 'var(--ink-soft)', fontWeight: 600 }}>
                       {Math.round((Number(g.total) / catTotal) * 100)}%
                     </span>
                   </div>
@@ -200,10 +296,10 @@ export function DashboardPage() {
         </div>
         {recent && recent.items.length > 0 ? (
           recent.items.map((t) => (
-            <div key={t.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 8px', borderRadius: 10 }}>
+            <div key={t.id} className="u-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 8px', borderRadius: 10 }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ width: 36, height: 36, borderRadius: 10, background: 'var(--fill)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15 }}>
-                  {t.direction === 'in' ? '↓' : '↑'}
+                <span style={{ width: 36, height: 36, borderRadius: 10, background: t.direction === 'in' ? 'color-mix(in srgb, var(--ok) 14%, transparent)' : 'var(--fill)', color: t.direction === 'in' ? 'var(--ok)' : 'var(--ink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {t.direction === 'in' ? <IconArrowIn size={17} /> : <IconArrowOut size={17} />}
                 </span>
                 <span>
                   <span style={{ fontSize: 14, fontWeight: 600, display: 'block' }}>{t.description}</span>
@@ -212,7 +308,7 @@ export function DashboardPage() {
                   </span>
                 </span>
               </span>
-              <span style={{ ...display, fontWeight: 600, fontSize: 15, color: t.direction === 'in' ? 'var(--ok)' : 'var(--ink)' }}>
+              <span style={{ ...display, fontWeight: 600, fontSize: 15, color: t.direction === 'in' ? 'var(--ok)' : 'var(--danger)' }}>
                 {money(t.amount)}
               </span>
             </div>

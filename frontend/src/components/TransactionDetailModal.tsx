@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { IconArrowIn, IconArrowOut, IconChevronDown } from '@/components/icons'
 import { display } from '@/lib/styles'
 import { apiFetch } from '@/lib/api'
 import { formatDate } from '@/lib/format'
@@ -81,8 +82,8 @@ export function TransactionDetailModal({
         </div>
         <div style={{ padding: '22px 22px 24px', display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span style={{ width: 52, height: 52, borderRadius: 14, background: 'var(--fill)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 24 }}>
-              {tx.direction === 'in' ? '↓' : '↑'}
+            <span style={{ width: 52, height: 52, borderRadius: 14, background: tx.direction === 'in' ? 'color-mix(in srgb, var(--ok) 14%, transparent)' : 'var(--fill)', color: tx.direction === 'in' ? 'var(--ok)' : 'var(--ink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {tx.direction === 'in' ? <IconArrowIn size={24} /> : <IconArrowOut size={24} />}
             </span>
             <div style={{ flex: 1 }}>
               <div style={{ fontSize: 18, fontWeight: 700 }}>{tx.description}</div>
@@ -90,33 +91,55 @@ export function TransactionDetailModal({
                 {tx.category_name ?? 'Sem categoria'} · {formatDate(tx.date)}
               </div>
             </div>
-            <div style={{ ...display, fontSize: 24, color: tx.direction === 'in' ? 'var(--ok)' : 'var(--ink)' }}>
+            <div style={{ ...display, fontSize: 24, color: tx.direction === 'in' ? 'var(--ok)' : 'var(--danger)' }}>
               {money(tx.amount)}
             </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <span style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600 }}>Categoria</span>
-            <select
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-              style={{
-                border: '1.5px solid var(--line-2)',
-                borderRadius: 11,
-                padding: '11px 13px',
-                fontSize: 14,
-                background: 'var(--panel-2)',
-                color: 'var(--ink)',
-                fontFamily: 'var(--sans)',
-              }}
-            >
-              <option value="">Selecione…</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <div style={{ position: 'relative' }}>
+              <select
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+                className="u-field u-select"
+                style={{
+                  width: '100%',
+                  appearance: 'none',
+                  WebkitAppearance: 'none',
+                  MozAppearance: 'none',
+                  border: '1.5px solid var(--line-2)',
+                  borderRadius: 11,
+                  padding: '12px 38px 12px 13px',
+                  fontSize: 14,
+                  background: 'var(--panel-2)',
+                  color: 'var(--ink)',
+                  fontFamily: 'var(--sans)',
+                  fontWeight: 500,
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="">Selecione…</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <span
+                style={{
+                  position: 'absolute',
+                  right: 12,
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  color: 'var(--ink-soft)',
+                  pointerEvents: 'none',
+                  display: 'flex',
+                }}
+              >
+                <IconChevronDown size={18} />
+              </span>
+            </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--ink-soft)', marginTop: 2 }}>
               <input type="checkbox" checked={createRule} onChange={(e) => setCreateRule(e.target.checked)} />
               Criar regra para transações parecidas
@@ -126,6 +149,7 @@ export function TransactionDetailModal({
           <button
             onClick={save}
             disabled={saving || !categoryId}
+            className="u-solid"
             style={{
               cursor: 'pointer',
               fontFamily: 'var(--sans)',

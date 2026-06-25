@@ -2,6 +2,15 @@ import { useCallback, useEffect, useState } from 'react'
 import { PluggyConnect } from 'react-pluggy-connect'
 import { toast } from 'sonner'
 import { Card } from '@/components/Card'
+import {
+  IconBolt,
+  IconMoon,
+  IconPlus,
+  IconPower,
+  IconRefresh,
+  IconSun,
+  IconTrash,
+} from '@/components/icons'
 import { display } from '@/lib/styles'
 import { apiFetch } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
@@ -94,14 +103,14 @@ export function ConfigPage() {
   }
 
   return (
-    <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 880 }}>
+    <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 18, width: '100%', maxWidth: 880 }}>
       <div style={{ ...display, fontSize: 26 }}>Configurações</div>
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 700, fontSize: 17 }}>Contas e bancos</span>
-          <span style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11.5, padding: '5px 11px', borderRadius: 30, background: 'var(--accent2)', color: '#fff' }}>
-            ⚡ via Pluggy
+          <span style={{ fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11.5, padding: '5px 11px', borderRadius: 30, background: 'var(--accent2)', color: '#fff', display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+            <IconBolt size={12} /> via Pluggy
           </span>
         </div>
 
@@ -126,17 +135,17 @@ export function ConfigPage() {
                 {c.last_sync_at ? ` · ${formatDate(c.last_sync_at)}` : ''}
               </div>
             </div>
-            <button onClick={() => handleSync(c.id)} disabled={busy === c.id} style={ghostBtn}>
-              sincronizar
+            <button onClick={() => handleSync(c.id)} disabled={busy === c.id} className="u-ghost" style={ghostBtn}>
+              <IconRefresh size={14} /> sincronizar
             </button>
-            <button onClick={() => handleRemove(c.id)} disabled={busy === c.id} style={dangerBtn}>
-              remover
+            <button onClick={() => handleRemove(c.id)} disabled={busy === c.id} className="u-ghost" style={dangerBtn}>
+              <IconTrash size={14} /> remover
             </button>
           </div>
         ))}
 
-        <button onClick={handleConnect} style={{ cursor: 'pointer', fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 14, color: 'var(--accent)', background: 'transparent', border: '1.5px dashed var(--line-2)', borderRadius: 14, padding: 15 }}>
-          + conectar nova conta via Pluggy
+        <button onClick={handleConnect} className="u-ghost" style={{ cursor: 'pointer', fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 14, color: 'var(--accent)', background: 'transparent', border: '1.5px dashed var(--line-2)', borderRadius: 14, padding: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+          <IconPlus size={16} /> conectar nova conta via Pluggy
         </button>
       </Card>
 
@@ -144,10 +153,10 @@ export function ConfigPage() {
         <span style={{ fontWeight: 700, fontSize: 16 }}>Aparência</span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => setTheme('light')} style={themeBtn(theme === 'light')}>
-            ☀ Claro
+            <IconSun size={15} /> Claro
           </button>
           <button onClick={() => setTheme('dark')} style={themeBtn(theme === 'dark')}>
-            ☾ Escuro
+            <IconMoon size={15} /> Escuro
           </button>
         </div>
         <div style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
@@ -155,8 +164,8 @@ export function ConfigPage() {
         </div>
       </Card>
 
-      <button onClick={logout} style={{ alignSelf: 'flex-start', cursor: 'pointer', fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 13.5, padding: '11px 18px', border: '1.5px solid var(--line-2)', borderRadius: 11, background: 'var(--panel)', color: 'var(--danger)' }}>
-        ⏻ Sair da conta
+      <button onClick={logout} className="u-ghost" style={{ alignSelf: 'flex-start', cursor: 'pointer', fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 13.5, padding: '11px 18px', border: '1.5px solid var(--line-2)', borderRadius: 11, background: 'var(--panel)', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <IconPower size={16} /> Sair da conta
       </button>
 
       {connect && (
@@ -193,6 +202,9 @@ const ghostBtn: React.CSSProperties = {
   borderRadius: 9,
   background: 'transparent',
   color: 'var(--ink)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 6,
 }
 const dangerBtn: React.CSSProperties = {
   ...ghostBtn,
@@ -211,5 +223,9 @@ function themeBtn(active: boolean): React.CSSProperties {
     borderRadius: 11,
     background: active ? 'var(--accent)' : 'var(--panel)',
     color: active ? 'var(--accent-ink)' : 'var(--ink)',
+    display: 'inline-flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   }
 }

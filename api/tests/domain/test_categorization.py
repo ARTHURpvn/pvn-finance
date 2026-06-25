@@ -68,6 +68,22 @@ def test_precedence_provider_when_no_rule() -> None:
     assert result == cat_id
 
 
+def test_provider_category_is_translated_to_pt() -> None:
+    # Pluggy manda "Video streaming" (inglês) → deve casar com "Assinaturas"
+    assinaturas = uuid4()
+    result = categorize(
+        description="NETFLIX",
+        provider_category="Video streaming",
+        rules=[],
+        categories=[
+            _cat("Assinaturas", assinaturas),
+            _cat("Alimentação", uuid4()),
+        ],
+        fallback_id=uuid4(),
+    )
+    assert result == assinaturas
+
+
 def test_precedence_fallback_when_nothing_matches() -> None:
     fallback = uuid4()
     result = categorize(
