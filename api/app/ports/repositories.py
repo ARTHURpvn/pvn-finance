@@ -49,7 +49,6 @@ class AccountRepository(Protocol):
 
 
 class TransactionRepository(Protocol):
-    def existing_provider_ids(self, connection_id: UUID) -> set[str]: ...
     def add_many(
         self,
         connection_id: UUID,

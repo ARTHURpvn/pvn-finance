@@ -21,6 +21,11 @@ class Settings(BaseSettings):
     database_url: str
     app_env: str = "development"
 
+    # Pool de conexões do banco (NFR — evita esgotar conexões sob concorrência).
+    db_pool_size: int = 5
+    db_max_overflow: int = 10
+    db_pool_recycle_seconds: int = 1800  # recicla conexões ociosas (30 min)
+
     # Autenticação / JWT (F2)
     jwt_secret: str
     jwt_algorithm: str = "HS256"
