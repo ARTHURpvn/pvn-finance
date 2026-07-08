@@ -121,3 +121,52 @@ def test_refresh_rejects_access_token(client: TestClient) -> None:
     resp = client.post("/auth/refresh", json={"refresh_token": access_token})
     assert resp.status_code == 401
     assert resp.json()["error"]["code"] == "invalid_token"
+
+
+def _login(client: TestClient, email: str) -> dict:
+    _register(client, email, "supersecret1")
+    return client.post(
+        "/auth/login", json={"email": email, "password": "supersecret1"}
+    ).json()
+
+
+def test_refresh_rotates_and_old_token_is_revoked(client: TestClient) -> None:
+    """Rotação: o refresh devolve um novo refresh e revoga o usado."""
+    old = _login(client, "rot@example.com")["refresh_token"]
+
+    first = client.post("/auth/refresh", json={"refresh_token": old})
+    assert first.status_code == 200
+    new_refresh = first.json()["refresh_token"]
+    assert new_refresh and new_refresh != old
+
+    # reusar o refresh antigo (já rotacionado) → 401 (detecção de reuso)
+    reused = client.post("/auth/refresh", json={"refresh_token": old})
+    assert reused.status_code == 401
+
+
+def test_refresh_reuse_revokes_whole_family(client: TestClient) -> None:
+    """Reuso de token rotacionado derruba a família inteira (anti-replay)."""
+    old = _login(client, "fam@example.com")["refresh_token"]
+    new_refresh = client.post(
+        "/auth/refresh", json={"refresh_token": old}
+    ).json()["refresh_token"]
+
+    # atacante reusa o antigo → dispara revogação da família
+    assert client.post("/auth/refresh", json={"refresh_token": old}).status_code == 401
+    # o token legítimo (novo) também foi invalidado pela detecção de reuso
+    assert (
+        client.post("/auth/refresh", json={"refresh_token": new_refresh}).status_code
+        == 401
+    )
+
+
+def test_logout_revokes_refresh(client: TestClient) -> None:
+    tokens = _login(client, "out@example.com")
+    refresh_token = tokens["refresh_token"]
+
+    logout = client.post("/auth/logout", json={"refresh_token": refresh_token})
+    assert logout.status_code == 204
+
+    # após logout, o refresh não vale mais
+    resp = client.post("/auth/refresh", json={"refresh_token": refresh_token})
+    assert resp.status_code == 401

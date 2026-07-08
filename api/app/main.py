@@ -56,8 +56,13 @@ def _register_exception_handlers(app: FastAPI) -> None:
 
 
 def _configure_cors(app: FastAPI) -> None:
-    raw = get_settings().cors_origins.strip()
+    settings = get_settings()
+    raw = settings.cors_origins.strip()
     origins = ["*"] if raw == "*" else [o.strip() for o in raw.split(",") if o.strip()]
+    if settings.app_env == "production" and "*" in origins:
+        raise RuntimeError(
+            "CORS_ORIGINS não pode ser '*' em produção — defina as origens permitidas."
+        )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,

@@ -175,6 +175,18 @@ class PluggyAdapter:
             body["options"] = options
         return self._post_authed("/connect_token", json=body)["accessToken"]
 
+    def _safe_next_path(self, next_value: str) -> str | None:
+        """Sanitiza o cursor `next`: aceita caminho relativo; para URL absoluta,
+        só segue se o host bater com o base_url (evita SSRF se a resposta for
+        adulterada). Retorna None se o destino não for confiável."""
+        if next_value.startswith("?"):
+            return f"/v2/transactions{next_value}"
+        if next_value.startswith("/"):
+            return next_value
+        if httpx.URL(next_value).host == self._http.base_url.host:
+            return next_value
+        return None
+
     # ---- FinancialDataPort ------------------------------------------------
 
     def fetch_item(self, *, provider_item_id: str) -> ProviderItem:
@@ -210,11 +222,9 @@ class PluggyAdapter:
         next_query = data.get("next")
         pages = 0
         while next_query and pages < 100:
-            path = (
-                f"/v2/transactions{next_query}"
-                if next_query.startswith("?")
-                else next_query
-            )
+            path = self._safe_next_path(next_query)
+            if path is None:  # cursor aponta para host estranho → não segue (SSRF)
+                break
             data = self._get(path, {})
             results.extend(data.get("results", []))
             next_query = data.get("next")

@@ -6,7 +6,6 @@ from app.api.deps import AuthServiceDep
 from app.api.errors import api_error
 from app.api.rate_limit import auth_rate_limit
 from app.api.schemas import (
-    AccessTokenResponse,
     LoginRequest,
     RefreshRequest,
     RegisterRequest,
@@ -50,14 +49,22 @@ def login(body: LoginRequest, service: AuthServiceDep) -> TokenResponse:
     )
 
 
-@router.post("/refresh", response_model=AccessTokenResponse)
-def refresh(body: RefreshRequest, service: AuthServiceDep) -> AccessTokenResponse:
+@router.post("/refresh", response_model=TokenResponse)
+def refresh(body: RefreshRequest, service: AuthServiceDep) -> TokenResponse:
     try:
-        access_token = service.refresh(body.refresh_token)
+        pair = service.refresh(body.refresh_token)
     except InvalidCredentials as exc:
         raise api_error(
             code="invalid_token",
             message="Refresh token inválido ou expirado",
             status_code=status.HTTP_401_UNAUTHORIZED,
         ) from exc
-    return AccessTokenResponse(access_token=access_token)
+    return TokenResponse(
+        access_token=pair.access_token, refresh_token=pair.refresh_token
+    )
+
+
+@router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
+def logout(body: RefreshRequest, service: AuthServiceDep) -> None:
+    """Revoga a família do refresh token (invalida a sessão). Idempotente."""
+    service.logout(body.refresh_token)

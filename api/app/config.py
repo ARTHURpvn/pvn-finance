@@ -63,6 +63,14 @@ class Settings(BaseSettings):
     auth_rate_limit_max: int = 20
     auth_rate_limit_window_seconds: int = 60
 
+    # Rate limiting de endpoints caros por usuário (sync, dashboard).
+    api_rate_limit_max: int = 60
+    api_rate_limit_window_seconds: int = 60
+
+    # Confiar no header X-Forwarded-For (só ative atrás de proxy/LB confiável,
+    # senão o cliente pode forjar o IP e burlar/derrubar o rate limit).
+    trust_forwarded_for: bool = False
+
 
 @lru_cache
 def get_settings() -> Settings:
