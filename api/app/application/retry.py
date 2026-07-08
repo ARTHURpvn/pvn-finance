@@ -15,7 +15,8 @@ def with_retry[T](
 ) -> T:
     """Executa ``operation``, repetindo em RetryableAggregatorError com backoff
     exponencial (base_delay * 2**n). Erros não-recuperáveis sobem na hora.
-    ``sleep`` é injetável para testes (sem espera real)."""
+    ``sleep`` é injetável para testes (sem espera real). Um 429 com header
+    ``Retry-After`` (``exc.retry_after``) usa esse valor como atraso mínimo."""
     last_exc: RetryableAggregatorError | None = None
     for attempt in range(max_attempts):
         try:
@@ -23,6 +24,8 @@ def with_retry[T](
         except RetryableAggregatorError as exc:
             last_exc = exc
             if attempt < max_attempts - 1:
-                sleep(base_delay * (2**attempt))
+                backoff = base_delay * (2**attempt)
+                delay = max(backoff, exc.retry_after or 0.0)
+                sleep(delay)
     assert last_exc is not None
     raise last_exc

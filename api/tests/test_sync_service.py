@@ -19,6 +19,7 @@ from app.infrastructure.user_repository import SqlUserRepository
 from app.ports.financial_data_port import (
     AggregatorError,
     ProviderAccount,
+    ProviderItem,
     ProviderTransaction,
     RetryableAggregatorError,
 )
@@ -110,6 +111,27 @@ def test_sync_skips_when_consent_expired(db_session: Session) -> None:
 
     assert result.status == ConnectionStatus.REQUER_REAUTH.value
     assert result.imported == 0
+    conn = SqlConnectionRepository(db_session).get(conn_id, user_id)
+    assert conn is not None and conn.status == ConnectionStatus.REQUER_REAUTH
+
+
+def test_sync_marks_reauth_when_item_login_error(db_session: Session) -> None:
+    """RN-03: item em LOGIN_ERROR no agregador → requer_reauth, sem importar."""
+    user_id, conn_id = _seed_connection(db_session, email="reauth@e.com")
+    base = _fake_with_data()
+    adapter = FakeFinancialDataAdapter(
+        accounts=base._accounts,
+        transactions=base._transactions,
+        item=ProviderItem(provider_item_id="i", status="LOGIN_ERROR"),
+    )
+    service = _make_service(db_session, adapter)
+
+    result = service.sync(connection_id=conn_id, user_id=user_id)
+
+    assert result.status == ConnectionStatus.REQUER_REAUTH.value
+    assert result.imported == 0
+    count = db_session.query(TransactionModel).filter_by(connection_id=conn_id).count()
+    assert count == 0
     conn = SqlConnectionRepository(db_session).get(conn_id, user_id)
     assert conn is not None and conn.status == ConnectionStatus.REQUER_REAUTH
 

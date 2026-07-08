@@ -11,7 +11,10 @@ from uuid import UUID, uuid4
 from app.application.categorization_service import CategorizationService
 from app.application.normalization import normalize_transaction
 from app.application.retry import with_retry
-from app.domain.connection import ConnectionStatus
+from app.domain.connection import (
+    ConnectionStatus,
+    connection_status_from_item,
+)
 from app.domain.dedupe import dedupe_by_provider_id
 from app.ports.financial_data_port import (
     AggregatorError,
@@ -66,12 +69,20 @@ class SyncService:
 
         now = datetime.now(UTC)
 
-        # RN-03: consentimento expirado → requer_reauth e não sincroniza.
+        # RN-03: consentimento expirado (localmente conhecido) → requer_reauth.
         if connection.is_consent_expired(now):
             self._connections.set_status(
                 connection.id, ConnectionStatus.REQUER_REAUTH
             )
             return SyncResult(status=ConnectionStatus.REQUER_REAUTH.value, imported=0)
+
+        # RN-03: lê o estado real do item no agregador (LOGIN_ERROR, MFA,
+        # consentimento expirado no provedor). Estados terminais não-OK abortam
+        # a sync; estados em progresso/desconhecidos (None) seguem o fluxo.
+        item_status = self._item_status(connection.provider_item_id, now)
+        if item_status in (ConnectionStatus.REQUER_REAUTH, ConnectionStatus.ERRO):
+            self._connections.set_status(connection.id, item_status)
+            return SyncResult(status=item_status.value, imported=0)
 
         log_id = self._sync_logs.start(connection.id)
         try:
@@ -87,6 +98,24 @@ class SyncService:
         )
         self._sync_logs.finish(log_id, status="success")
         return SyncResult(status=ConnectionStatus.ATIVA.value, imported=imported)
+
+    def _item_status(
+        self, provider_item_id: str, now: datetime
+    ) -> ConnectionStatus | None:
+        """Lê o item no agregador e mapeia para o status da conexão (RN-03).
+
+        Falha de leitura não aborta a sync (retorna None): o fetch seguinte
+        tratará o erro. Estado em progresso/desconhecido também retorna None."""
+        try:
+            item = with_retry(
+                lambda: self._adapter.fetch_item(provider_item_id=provider_item_id),
+                base_delay=self._base_delay,
+            )
+        except AggregatorError:
+            return None
+        return connection_status_from_item(
+            item.status, consent_expires_at=item.consent_expires_at, now=now
+        )
 
     def _do_sync(
         self, *, connection_id: UUID, user_id: UUID, provider_item_id: str
