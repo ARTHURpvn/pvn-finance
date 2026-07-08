@@ -23,7 +23,14 @@ def get_engine() -> Engine:
     """Engine singleton, criada sob demanda a partir do DATABASE_URL."""
     global _engine
     if _engine is None:
-        _engine = create_engine(get_settings().database_url, pool_pre_ping=True)
+        settings = get_settings()
+        _engine = create_engine(
+            settings.database_url,
+            pool_pre_ping=True,  # descarta conexões mortas antes de usar
+            pool_size=settings.db_pool_size,
+            max_overflow=settings.db_max_overflow,
+            pool_recycle=settings.db_pool_recycle_seconds,
+        )
     return _engine
 
 

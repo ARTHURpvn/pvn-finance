@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.middleware.gzip import GZipMiddleware
 
 from app.api.accounts import router as accounts_router
 from app.api.auth import router as auth_router
@@ -68,6 +69,8 @@ def _configure_cors(app: FastAPI) -> None:
 def create_app() -> FastAPI:
     setup_logging()
     app = FastAPI(title="Consolida API", version="0.1.0")
+    # Comprime respostas > 1KB (extrato, dashboard) — ganho grande em JSON.
+    app.add_middleware(GZipMiddleware, minimum_size=1024)
     _configure_cors(app)
     _register_exception_handlers(app)
     app.include_router(health_router)

@@ -5,7 +5,7 @@ Fluxo: consent check (RN-03) → fetch via Port (com backoff) → normalização
 status/last_sync_at → sync_logs (NFR-004/009)."""
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime, timedelta
 from uuid import UUID, uuid4
 
 from app.application.categorization_service import CategorizationService
@@ -84,10 +84,23 @@ class SyncService:
             self._connections.set_status(connection.id, item_status)
             return SyncResult(status=item_status.value, imported=0)
 
+        # Sync incremental: busca só o que mudou desde o último sync (RN — só a
+        # primeira carga baixa o histórico todo). Overlap de 1 dia recupera
+        # transações que chegaram atrasadas/pendentes com data anterior.
+        since = (
+            (connection.last_sync_at - timedelta(days=1)).date()
+            if connection.last_sync_at is not None
+            else None
+        )
+
         log_id = self._sync_logs.start(connection.id)
         try:
-            imported = self._do_sync(connection_id=connection.id, user_id=user_id,
-                                     provider_item_id=connection.provider_item_id)
+            imported = self._do_sync(
+                connection_id=connection.id,
+                user_id=user_id,
+                provider_item_id=connection.provider_item_id,
+                since=since,
+            )
         except AggregatorError as exc:
             self._connections.set_status(connection.id, ConnectionStatus.ERRO)
             self._sync_logs.finish(log_id, status="erro", error=str(exc)[:1000])
@@ -118,7 +131,12 @@ class SyncService:
         )
 
     def _do_sync(
-        self, *, connection_id: UUID, user_id: UUID, provider_item_id: str
+        self,
+        *,
+        connection_id: UUID,
+        user_id: UUID,
+        provider_item_id: str,
+        since: date | None = None,
     ) -> int:
         provider_accounts = with_retry(
             lambda: self._adapter.fetch_accounts(provider_item_id=provider_item_id),
@@ -136,11 +154,11 @@ class SyncService:
                 connection_id=connection_id,
                 provider_account=provider_account,
             )
-            existing = self._transactions.existing_provider_ids(connection_id)
             provider_txs = with_retry(
                 lambda pa=provider_account: self._adapter.fetch_transactions(
                     provider_item_id=provider_item_id,
                     provider_account_id=pa.provider_account_id,
+                    since=since,
                 ),
                 base_delay=self._base_delay,
             )
@@ -161,7 +179,9 @@ class SyncService:
                 )
                 for pt in provider_txs
             ]
-            fresh = dedupe_by_provider_id(domain_txs, existing_provider_ids=existing)
+            # Dedup intra-lote (RN-05): a resposta do provedor pode repetir ids.
+            # O dedup contra o que já existe é garantido no banco (ON CONFLICT).
+            fresh = dedupe_by_provider_id(domain_txs)
             items = [
                 (tx, raw_by_id.get(tx.provider_transaction_id)) for tx in fresh
             ]

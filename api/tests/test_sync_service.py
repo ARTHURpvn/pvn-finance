@@ -94,9 +94,40 @@ def test_sync_is_idempotent_dedupe(db_session: Session) -> None:
     service.sync(connection_id=conn_id, user_id=user_id)
     second = service.sync(connection_id=conn_id, user_id=user_id)
 
-    assert second.imported == 0  # RN-05: nada novo
+    assert second.imported == 0  # RN-05: dedupe no banco (ON CONFLICT)
     count = db_session.query(TransactionModel).filter_by(connection_id=conn_id).count()
     assert count == 2
+
+
+def test_second_sync_is_incremental_passing_since(db_session: Session) -> None:
+    """A 1ª sync busca tudo (since=None); a 2ª busca só desde o último sync."""
+    user_id, conn_id = _seed_connection(db_session, email="incr@e.com")
+
+    class _RecordingAdapter(FakeFinancialDataAdapter):
+        def __init__(self, **kw) -> None:
+            super().__init__(**kw)
+            self.since_calls: list[date | None] = []
+
+        def fetch_transactions(self, *, provider_item_id, provider_account_id, since=None):
+            self.since_calls.append(since)
+            return super().fetch_transactions(
+                provider_item_id=provider_item_id,
+                provider_account_id=provider_account_id,
+                since=since,
+            )
+
+    base = _fake_with_data()
+    adapter = _RecordingAdapter(
+        accounts=base._accounts, transactions=base._transactions
+    )
+    service = _make_service(db_session, adapter)
+
+    service.sync(connection_id=conn_id, user_id=user_id)
+    service.sync(connection_id=conn_id, user_id=user_id)
+
+    assert adapter.since_calls[0] is None  # primeira carga: histórico completo
+    assert adapter.since_calls[1] is not None  # segunda: incremental
+    assert adapter.since_calls[1] <= date.today()
 
 
 def test_sync_skips_when_consent_expired(db_session: Session) -> None:

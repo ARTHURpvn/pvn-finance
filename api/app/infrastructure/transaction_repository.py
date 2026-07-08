@@ -5,6 +5,7 @@ from typing import Any
 from uuid import UUID
 
 from sqlalchemy import func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
 from app.domain.transaction import Direction, Transaction
@@ -86,38 +87,46 @@ class SqlTransactionRepository:
         self._session.commit()
         return True
 
-    def existing_provider_ids(self, connection_id: UUID) -> set[str]:
-        """Ids de transações já persistidas na conexão (base do dedupe RN-05)."""
-        stmt = select(TransactionModel.provider_transaction_id).where(
-            TransactionModel.connection_id == connection_id
-        )
-        return set(self._session.scalars(stmt))
-
     def add_many(
         self,
         connection_id: UUID,
         items: list[tuple[Transaction, dict[str, Any] | None]],
     ) -> int:
-        """Persiste transações novas. Commit atômico (chamado por conta)."""
-        models = [
-            TransactionModel(
-                id=tx.id,
-                user_id=tx.user_id,
-                account_id=tx.account_id,
-                connection_id=connection_id,
-                provider_transaction_id=tx.provider_transaction_id,
-                date=tx.date,
-                amount=tx.amount,
-                direction=tx.direction.value,
-                description=tx.description,
-                counterpart=tx.counterpart,
-                category_id=tx.category_id,
-                raw=raw,
-            )
+        """Persiste transações novas de forma atômica e idempotente (RN-05).
+
+        Usa ``INSERT ... ON CONFLICT DO NOTHING`` sobre a unique
+        ``(connection_id, provider_transaction_id)``: o banco descarta
+        duplicatas de syncs concorrentes sem corrida. Retorna quantas linhas
+        foram de fato inseridas."""
+        rows = [
+            {
+                "id": tx.id,
+                "user_id": tx.user_id,
+                "account_id": tx.account_id,
+                "connection_id": connection_id,
+                "provider_transaction_id": tx.provider_transaction_id,
+                "date": tx.date,
+                "amount": tx.amount,
+                "direction": tx.direction.value,
+                "description": tx.description,
+                "counterpart": tx.counterpart,
+                "category_id": tx.category_id,
+                "raw": raw,
+            }
             for tx, raw in items
         ]
-        if not models:
+        if not rows:
             return 0
-        self._session.add_all(models)
+        stmt = (
+            pg_insert(TransactionModel)
+            .values(rows)
+            .on_conflict_do_nothing(
+                index_elements=["connection_id", "provider_transaction_id"]
+            )
+            .returning(TransactionModel.id)
+        )
+        # RETURNING só devolve as linhas efetivamente inseridas — as descartadas
+        # por conflito não aparecem, dando a contagem exata (independe de rowcount).
+        inserted = self._session.execute(stmt).fetchall()
         self._session.commit()
-        return len(models)
+        return len(inserted)
