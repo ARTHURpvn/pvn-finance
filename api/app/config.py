@@ -35,11 +35,20 @@ class Settings(BaseSettings):
     pluggy_client_secret: str | None = None
     pluggy_base_url: str = "https://api.pluggy.ai"
 
+    # URL pública do receptor de webhook, enviada no connect_token
+    # (options.webhookUrl). Sem ela, os itens criados não notificam.
+    pluggy_webhook_url: str | None = None
+
     # CORS — origens permitidas (csv) ou "*". Em produção, restrinja.
     cors_origins: str = "*"
 
-    # Webhook do Pluggy (F9) — segredo p/ validar assinatura HMAC (opcional).
+    # Webhook do Pluggy (F9) — o Pluggy NÃO assina o payload (sem HMAC).
+    # A autenticação é por header customizado configurado ao criar o Webhook
+    # na Pluggy: comparamos ``pluggy_webhook_header`` == ``pluggy_webhook_secret``.
+    # Opcionalmente, restringe por IP de origem (allowlist da Pluggy).
     pluggy_webhook_secret: str | None = None
+    pluggy_webhook_header: str = "x-webhook-secret"
+    pluggy_webhook_allowed_ips: str = ""  # csv; vazio = não filtra por IP
 
     # Worker de sync agendado (F9)
     sync_interval_minutes: int = 60  # intervalo entre varreduras

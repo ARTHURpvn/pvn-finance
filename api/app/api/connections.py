@@ -35,10 +35,12 @@ def _to_response(connection: Connection) -> ConnectionResponse:
 
 @router.post("", response_model=ConnectTokenResponse, status_code=status.HTTP_201_CREATED)
 def start_connection(
-    _current_user: CurrentUser, service: ConnectionServiceDep
+    current_user: CurrentUser, service: ConnectionServiceDep
 ) -> ConnectTokenResponse:
     """FR-003: inicia conexão, retornando o token do widget."""
-    return ConnectTokenResponse(connect_token=service.create_connect_token())
+    return ConnectTokenResponse(
+        connect_token=service.create_connect_token(current_user.id)
+    )
 
 
 @router.post(

@@ -3,6 +3,7 @@
 Traduz os payloads do Pluggy (forma "provider") para os DTOs canônicos
 do Open Finance. O domínio não conhece este módulo (ADR-002)."""
 
+import time
 from datetime import date as date_type
 from datetime import datetime
 from decimal import Decimal
@@ -13,6 +14,7 @@ import httpx
 from app.ports.financial_data_port import (
     AggregatorError,
     ProviderAccount,
+    ProviderItem,
     ProviderTransaction,
     RetryableAggregatorError,
 )
@@ -27,11 +29,23 @@ _DEFAULT_ACCOUNT_TYPE = "payment"
 
 #: Status HTTP transitórios que justificam retry com backoff (NFR-004).
 _RETRYABLE_STATUS = {429, 500, 502, 503, 504, 529}
+#: Status HTTP que indicam apiKey ausente/expirada → reautenticar uma vez.
+#: O Pluggy responde 403 (não 401) para "Missing or invalid authorization token".
+_AUTH_ERROR_STATUS = {httpx.codes.UNAUTHORIZED, httpx.codes.FORBIDDEN}
+#: A apiKey do Pluggy expira em 2h; renovamos com folga para evitar corridas.
+_API_KEY_TTL_SECONDS = 110 * 60
 
 
 def _parse_date(value: str) -> date_type:
     """Converte data ISO-8601 do Pluggy (com 'Z') para date."""
     return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
+
+
+def _parse_datetime(value: str | None) -> datetime | None:
+    """Converte datetime ISO-8601 do Pluggy (com 'Z') para datetime, ou None."""
+    if not value:
+        return None
+    return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
 class PluggyAdapter:
@@ -47,13 +61,30 @@ class PluggyAdapter:
         self._client_secret = client_secret
         self._http = http_client or httpx.Client(base_url=base_url, timeout=30.0)
         self._api_key: str | None = None
+        self._api_key_expires_at: float = 0.0
 
     # ---- transporte / tradução de erros -----------------------------------
 
     @staticmethod
-    def _handle(resp: httpx.Response) -> httpx.Response:
+    def _retry_after(resp: httpx.Response) -> float | None:
+        """Extrai o header ``Retry-After`` (segundos) de uma resposta 429."""
+        raw = resp.headers.get("Retry-After")
+        if raw is None:
+            return None
+        try:
+            return float(raw)
+        except ValueError:
+            return None
+
+    @classmethod
+    def _handle(cls, resp: httpx.Response) -> httpx.Response:
         if resp.status_code in _RETRYABLE_STATUS:
-            raise RetryableAggregatorError(f"pluggy retornou {resp.status_code}")
+            retry_after = (
+                cls._retry_after(resp) if resp.status_code == 429 else None
+            )
+            raise RetryableAggregatorError(
+                f"pluggy retornou {resp.status_code}", retry_after=retry_after
+            )
         try:
             resp.raise_for_status()
         except httpx.HTTPStatusError as exc:
@@ -94,32 +125,67 @@ class PluggyAdapter:
             )
         )
         self._api_key = resp.json()["apiKey"]
+        self._api_key_expires_at = time.monotonic() + _API_KEY_TTL_SECONDS
         return self._api_key
 
     def _headers(self) -> dict[str, str]:
-        if self._api_key is None:
+        # Reusa a apiKey enquanto válida (expira em 2h); reautentica ao expirar
+        # para não bater no /auth a cada request (risco de rate limit).
+        if self._api_key is None or time.monotonic() >= self._api_key_expires_at:
             self._authenticate()
         assert self._api_key is not None
         return {"X-API-KEY": self._api_key}
 
     def _get(self, path: str, params: dict[str, Any]) -> dict[str, Any]:
         resp = self._get_raw(path, params, self._headers())
-        if resp.status_code == httpx.codes.UNAUTHORIZED:
-            # apiKey pode ter expirado — reautentica uma vez.
+        if resp.status_code in _AUTH_ERROR_STATUS:
+            # apiKey ausente/expirada (Pluggy usa 403) — reautentica uma vez.
             self._api_key = None
             resp = self._get_raw(path, params, self._headers())
         return self._handle(resp).json()
 
+    def _post_authed(self, path: str, *, json: dict[str, Any]) -> dict[str, Any]:
+        resp = self._post(path, json=json, headers=self._headers())
+        if resp.status_code in _AUTH_ERROR_STATUS:
+            self._api_key = None
+            resp = self._post(path, json=json, headers=self._headers())
+        return self._handle(resp).json()
+
     # ---- widget -----------------------------------------------------------
 
-    def create_connect_token(self, *, item_id: str | None = None) -> str:
+    def create_connect_token(
+        self,
+        *,
+        item_id: str | None = None,
+        webhook_url: str | None = None,
+        client_user_id: str | None = None,
+    ) -> str:
         """Emite o accessToken do Pluggy Connect (FR-003). Com `item_id`,
-        habilita o fluxo de reautenticação (FR-005)."""
-        body = {"itemId": item_id} if item_id else {}
-        resp = self._handle(self._post("/connect_token", json=body, headers=self._headers()))
-        return resp.json()["accessToken"]
+        habilita reauth (FR-005). `webhook_url` inscreve o item para
+        notificações; `client_user_id` vincula o item ao usuário."""
+        body: dict[str, Any] = {}
+        if item_id:
+            body["itemId"] = item_id
+        options: dict[str, Any] = {}
+        if webhook_url:
+            options["webhookUrl"] = webhook_url
+        if client_user_id:
+            options["clientUserId"] = client_user_id
+        if options:
+            body["options"] = options
+        return self._post_authed("/connect_token", json=body)["accessToken"]
 
     # ---- FinancialDataPort ------------------------------------------------
+
+    def fetch_item(self, *, provider_item_id: str) -> ProviderItem:
+        data = self._get(f"/items/{provider_item_id}", {})
+        return ProviderItem(
+            provider_item_id=data["id"],
+            status=data.get("status") or "",
+            execution_status=data.get("executionStatus"),
+            consent_expires_at=_parse_datetime(data.get("consentExpiresAt")),
+            error_code=(data.get("error") or {}).get("code"),
+        )
 
     def fetch_accounts(self, *, provider_item_id: str) -> list[ProviderAccount]:
         data = self._get("/accounts", {"itemId": provider_item_id})

@@ -1,7 +1,7 @@
 """Contrato do PluggyAdapter — mapeamento de payloads (sem rede)."""
 
 import json
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
 
@@ -117,6 +117,58 @@ def test_create_connect_token() -> None:
     assert adapter.create_connect_token() == "connect-abc"
 
 
+def test_connect_token_sends_webhook_and_client_user_options() -> None:
+    captured: dict = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth":
+            return httpx.Response(200, json={"apiKey": "k"})
+        if request.url.path == "/connect_token":
+            captured.update(json.loads(request.content))
+            return httpx.Response(200, json={"accessToken": "t"})
+        return httpx.Response(404)
+
+    adapter = _make_adapter(handler)
+    adapter.create_connect_token(
+        item_id="it-1", webhook_url="https://x.test/wh", client_user_id="u-1"
+    )
+
+    assert captured["itemId"] == "it-1"
+    assert captured["options"] == {
+        "webhookUrl": "https://x.test/wh",
+        "clientUserId": "u-1",
+    }
+
+
+def test_fetch_item_maps_status_and_consent() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth":
+            return httpx.Response(200, json={"apiKey": "k"})
+        if request.url.path == "/items/it-9":
+            return httpx.Response(
+                200,
+                json={
+                    "id": "it-9",
+                    "status": "LOGIN_ERROR",
+                    "executionStatus": "INVALID_CREDENTIALS",
+                    "consentExpiresAt": "2026-12-31T23:59:59.000Z",
+                    "error": {"code": "INVALID_CREDENTIALS", "message": "x"},
+                },
+            )
+        return httpx.Response(404)
+
+    adapter = _make_adapter(handler)
+    item = adapter.fetch_item(provider_item_id="it-9")
+
+    assert item.provider_item_id == "it-9"
+    assert item.status == "LOGIN_ERROR"
+    assert item.execution_status == "INVALID_CREDENTIALS"
+    assert item.error_code == "INVALID_CREDENTIALS"
+    assert item.consent_expires_at == datetime.fromisoformat(
+        "2026-12-31T23:59:59+00:00"
+    )
+
+
 def test_reauthenticates_on_401() -> None:
     calls = {"auth": 0, "accounts": 0}
 
@@ -137,3 +189,67 @@ def test_reauthenticates_on_401() -> None:
 
     assert len(accounts) == 2
     assert calls["auth"] == 2  # reautenticou após o 401
+
+
+def test_reauthenticates_on_403() -> None:
+    """O Pluggy responde 403 (não 401) para apiKey expirada/inválida."""
+    calls = {"auth": 0, "accounts": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/auth":
+            calls["auth"] += 1
+            return httpx.Response(200, json={"apiKey": f"key-{calls['auth']}"})
+        if path == "/accounts":
+            calls["accounts"] += 1
+            if calls["accounts"] == 1:
+                return httpx.Response(
+                    403, json={"code": 403, "message": "invalid token"}
+                )
+            return httpx.Response(200, json=_load("accounts.json"))
+        return httpx.Response(404)
+
+    adapter = _make_adapter(handler)
+    accounts = adapter.fetch_accounts(provider_item_id="item-1")
+
+    assert len(accounts) == 2
+    assert calls["auth"] == 2  # reautenticou após o 403
+
+
+def test_reauthenticates_on_403_for_connect_token() -> None:
+    calls = {"auth": 0, "ct": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        path = request.url.path
+        if path == "/auth":
+            calls["auth"] += 1
+            return httpx.Response(200, json={"apiKey": f"key-{calls['auth']}"})
+        if path == "/connect_token":
+            calls["ct"] += 1
+            if calls["ct"] == 1:
+                return httpx.Response(403, json={"code": 403, "message": "x"})
+            return httpx.Response(200, json={"accessToken": "ok"})
+        return httpx.Response(404)
+
+    adapter = _make_adapter(handler)
+    token = adapter.create_connect_token()
+
+    assert token == "ok"
+    assert calls["auth"] == 2  # POST também reautentica
+
+
+def test_retry_after_header_propagates_to_error() -> None:
+    from app.ports.financial_data_port import RetryableAggregatorError
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/auth":
+            return httpx.Response(200, json={"apiKey": "k"})
+        return httpx.Response(429, headers={"Retry-After": "7"}, json={})
+
+    adapter = _make_adapter(handler)
+    try:
+        adapter.fetch_accounts(provider_item_id="item-1")
+    except RetryableAggregatorError as exc:
+        assert exc.retry_after == 7.0
+    else:  # pragma: no cover
+        raise AssertionError("esperava RetryableAggregatorError")

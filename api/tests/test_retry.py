@@ -49,3 +49,28 @@ def test_backoff_delays_are_exponential() -> None:
         with_retry(op, max_attempts=3, base_delay=0.5, sleep=delays.append)
 
     assert delays == [0.5, 1.0]  # 0.5*2^0, 0.5*2^1 (sem sleep após última)
+
+
+def test_retry_after_is_honored_as_minimum_delay() -> None:
+    delays: list[float] = []
+
+    def op() -> str:
+        raise RetryableAggregatorError("429", retry_after=5.0)
+
+    with pytest.raises(RetryableAggregatorError):
+        with_retry(op, max_attempts=3, base_delay=0.5, sleep=delays.append)
+
+    # Retry-After (5s) domina o backoff exponencial (0.5, 1.0) — atraso mínimo.
+    assert delays == [5.0, 5.0]
+
+
+def test_backoff_wins_when_larger_than_retry_after() -> None:
+    delays: list[float] = []
+
+    def op() -> str:
+        raise RetryableAggregatorError("429", retry_after=0.1)
+
+    with pytest.raises(RetryableAggregatorError):
+        with_retry(op, max_attempts=3, base_delay=1.0, sleep=delays.append)
+
+    assert delays == [1.0, 2.0]  # backoff maior que retry_after prevalece

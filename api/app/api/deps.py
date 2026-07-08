@@ -12,6 +12,7 @@ from app.application.auth_service import AuthService
 from app.application.connection_service import ConnectionService
 from app.application.sync_service import SyncService
 from app.bootstrap import build_sync_service, make_financial_adapter
+from app.config import get_settings
 from app.domain.user import User
 from app.infrastructure.connection_repository import SqlConnectionRepository
 from app.infrastructure.db import get_session
@@ -77,7 +78,9 @@ def get_connection_service(
     session: SessionDep, adapter: AdapterDep
 ) -> ConnectionService:
     return ConnectionService(
-        adapter=adapter, connections=SqlConnectionRepository(session)
+        adapter=adapter,
+        connections=SqlConnectionRepository(session),
+        webhook_url=get_settings().pluggy_webhook_url,
     )
 
 

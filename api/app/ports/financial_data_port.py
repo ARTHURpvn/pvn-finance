@@ -17,7 +17,14 @@ class AggregatorError(Exception):
 
 
 class RetryableAggregatorError(AggregatorError):
-    """Falha transitória (429/529/5xx/rede) — elegível a retry com backoff."""
+    """Falha transitória (429/529/5xx/rede) — elegível a retry com backoff.
+
+    ``retry_after`` (segundos) carrega o header ``Retry-After`` de um 429,
+    honrado como atraso mínimo pelo backoff (NFR-004)."""
+
+    def __init__(self, message: str = "", *, retry_after: float | None = None) -> None:
+        super().__init__(message)
+        self.retry_after = retry_after
 
 
 @dataclass(frozen=True, slots=True)
@@ -45,11 +52,40 @@ class ProviderTransaction:
     raw: dict[str, Any] | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class ProviderItem:
+    """Item (conexão) na forma do agregador — status e consentimento.
+
+    Espelha ``GET /items/{id}`` do Pluggy: ``status``/``execution_status``
+    dirigem RN-03 (requer_reauth); ``consent_expires_at`` alimenta o check
+    de expiração do consentimento."""
+
+    provider_item_id: str
+    status: str
+    execution_status: str | None = None
+    consent_expires_at: datetime | None = None
+    error_code: str | None = None
+
+
 class FinancialDataPort(Protocol):
     """Contrato do agregador: emissão de connect token + leitura de dados."""
 
-    def create_connect_token(self, *, item_id: str | None = None) -> str:
-        """Emite o token do widget de conexão (com item_id = reauth)."""
+    def create_connect_token(
+        self,
+        *,
+        item_id: str | None = None,
+        webhook_url: str | None = None,
+        client_user_id: str | None = None,
+    ) -> str:
+        """Emite o token do widget de conexão.
+
+        ``item_id`` habilita reauth (FR-005); ``webhook_url`` inscreve o item
+        para notificações (senão o item nunca notifica); ``client_user_id``
+        vincula o item ao usuário do nosso lado."""
+        ...
+
+    def fetch_item(self, *, provider_item_id: str) -> ProviderItem:
+        """Lê o estado atual do item no agregador (status + consentimento)."""
         ...
 
     def fetch_accounts(self, *, provider_item_id: str) -> list[ProviderAccount]:
