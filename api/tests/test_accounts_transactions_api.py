@@ -124,3 +124,49 @@ def test_transactions_never_expose_raw(client: TestClient) -> None:
         _connect_and_sync(client, headers)
         resp = client.get("/transactions", headers=headers)
     assert "raw" not in resp.text
+
+
+def _fake_with_transfers() -> FakeFinancialDataAdapter:
+    account = ProviderAccount(
+        provider_account_id="chk", type="checking", name="C",
+        currency="BRL", balance=Decimal("100.00"),
+    )
+    txs = {
+        "chk": [
+            ProviderTransaction(
+                provider_transaction_id="compra", date=date(2026, 1, 10),
+                amount=Decimal("-50.00"), description="Mercado",
+                provider_category="Groceries",
+            ),
+            ProviderTransaction(  # investimento (Rende Fácil)
+                provider_transaction_id="rf", date=date(2026, 1, 11),
+                amount=Decimal("-300.00"), description="RENDE FACIL",
+                provider_category="Automatic investment",
+            ),
+            ProviderTransaction(  # transferência entre contas próprias
+                provider_transaction_id="self", date=date(2026, 1, 12),
+                amount=Decimal("-200.00"), description="Para mim mesmo",
+                provider_category="Same person transfer",
+            ),
+            ProviderTransaction(  # pagamento de fatura
+                provider_transaction_id="pgto", date=date(2026, 1, 13),
+                amount=Decimal("-100.00"), description="PGTO CARTAO",
+                provider_category="Credit card payment",
+            ),
+        ]
+    }
+    return FakeFinancialDataAdapter(accounts=[account], transactions=txs)
+
+
+def test_exclude_transfers_hides_internal_movements(client: TestClient) -> None:
+    headers = _auth(client, email="f6inv@e.com")
+    with _override_adapter(_fake_with_transfers()):
+        _connect_and_sync(client, headers)
+        full = client.get("/transactions", headers=headers).json()
+        filtered = client.get(
+            "/transactions?exclude_transfers=true", headers=headers
+        ).json()
+    assert full["total"] == 4  # Mercado + Rende Fácil + transf. própria + fatura
+    # com filtro: só o gasto real (Mercado); as 3 movimentações internas somem
+    assert filtered["total"] == 1
+    assert filtered["items"][0]["description"] == "Mercado"

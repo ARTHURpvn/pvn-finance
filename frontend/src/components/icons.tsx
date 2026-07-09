@@ -103,16 +103,17 @@ export const IconSearch = (p: { size?: number }) => (
     <line x1="21" y1="21" x2="16.5" y2="16.5" />
   </Base>
 )
+// Entrada de dinheiro: seta para cima. Saída: seta para baixo.
 export const IconArrowIn = (p: { size?: number }) => (
   <Base {...p}>
-    <path d="M17 7L7 17" />
-    <path d="M17 14V7H10" />
+    <path d="M12 19V5" />
+    <path d="M5 12l7-7 7 7" />
   </Base>
 )
 export const IconArrowOut = (p: { size?: number }) => (
   <Base {...p}>
-    <path d="M7 17L17 7" />
-    <path d="M8 7h9v9" />
+    <path d="M12 5v14" />
+    <path d="M5 12l7 7 7-7" />
   </Base>
 )
 export const IconRefresh = (p: { size?: number }) => (

@@ -21,7 +21,12 @@ export function ExtratoPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) })
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(PAGE_SIZE),
+      exclude_transfers: 'true', // esconde movimentação interna (Rende Fácil,
+      // transferência entre contas próprias, pagamento de fatura)
+    })
     if (q) params.set('q', q)
     try {
       setData(await apiFetch<TransactionsPage>(`/transactions?${params}`))
@@ -102,6 +107,14 @@ export function ExtratoPage() {
               </div>
               {items.map((t, idx) => {
                 const income = t.direction === 'in'
+                const isCard = t.account_type === 'credit_card'
+                // Cartão de crédito (gasto) em laranja; entrada verde; saída débito vermelho.
+                const tone =
+                  isCard && !income
+                    ? 'var(--gold)'
+                    : income
+                      ? 'var(--ok)'
+                      : 'var(--danger)'
                 return (
                   <div
                     key={t.id}
@@ -121,10 +134,8 @@ export function ExtratoPage() {
                         width: 40,
                         height: 40,
                         borderRadius: 12,
-                        background: income
-                          ? 'color-mix(in srgb, var(--ok) 14%, transparent)'
-                          : 'var(--fill)',
-                        color: income ? 'var(--ok)' : 'var(--ink-soft)',
+                        background: `color-mix(in srgb, ${tone} 14%, transparent)`,
+                        color: tone,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -145,7 +156,7 @@ export function ExtratoPage() {
                       >
                         {t.description}
                       </div>
-                      <div style={{ marginTop: 3 }}>
+                      <div style={{ marginTop: 3, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
                         <span
                           style={{
                             fontSize: 11.5,
@@ -158,6 +169,20 @@ export function ExtratoPage() {
                         >
                           {t.category_name ?? 'Sem categoria'}
                         </span>
+                        {isCard && (
+                          <span
+                            style={{
+                              fontSize: 11.5,
+                              color: 'var(--gold)',
+                              background: 'color-mix(in srgb, var(--gold) 15%, transparent)',
+                              padding: '2px 8px',
+                              borderRadius: 20,
+                              fontWeight: 700,
+                            }}
+                          >
+                            cartão
+                          </span>
+                        )}
                       </div>
                     </div>
                     <span
@@ -166,7 +191,7 @@ export function ExtratoPage() {
                         fontWeight: 700,
                         fontSize: 15,
                         whiteSpace: 'nowrap',
-                        color: income ? 'var(--ok)' : 'var(--danger)',
+                        color: tone,
                       }}
                     >
                       {money(t.amount)}

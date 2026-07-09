@@ -88,6 +88,7 @@ class AccountsResponse(BaseModel):
 class TransactionResponse(BaseModel):
     id: UUID
     account_id: UUID
+    account_type: str | None = None  # ex.: credit_card (para destaque no extrato)
     date: date
     amount: str
     direction: str

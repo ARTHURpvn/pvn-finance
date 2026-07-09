@@ -17,26 +17,31 @@ class Direction(StrEnum):
         return cls.IN if amount >= 0 else cls.OUT
 
 
-#: Categorias do agregador que são movimentação do próprio dinheiro — não
-#: gasto nem receita, portanto neutras no fluxo (Entrou/Saiu):
-#: - investimento próprio (aplicação/resgate/proventos) — o valor vive no
-#:   patrimônio via os investimentos. Ex.: BB Rende Fácil, Aplicação RDB.
-#: - transferência entre contas do mesmo titular. Ex.: PIX de uma conta sua
-#:   para outra sua ("Same person transfer").
-_FLOW_NEUTRAL_CATEGORIES = frozenset(
-    {
-        "automatic investment",
-        "investments",
-        "proceeds interests and dividends",
-        "same person transfer",
-    }
+#: Movimentação de investimento próprio (aplicação/resgate/proventos). O valor
+#: vive no patrimônio via os investimentos. Ex.: BB Rende Fácil, Aplicação RDB.
+#: São escondidas do extrato (ruído automático) além de neutras no fluxo.
+INVESTMENT_CATEGORIES = frozenset(
+    {"automatic investment", "investments", "proceeds interests and dividends"}
+)
+#: Transferência entre contas do mesmo titular. Ex.: PIX de uma conta sua para
+#: outra sua. Neutra no fluxo, mas continua visível no extrato.
+_SELF_TRANSFER_CATEGORIES = frozenset({"same person transfer"})
+#: Pagamento de fatura de cartão — quitação de dívida, não gasto novo (a compra
+#: já conta). Aparece nas DUAS pernas (débito na conta + crédito no cartão);
+#: tratar como neutra evita o gasto duplicado.
+_LIABILITY_PAYMENT_CATEGORIES = frozenset({"credit card payment"})
+
+#: Categorias que são movimentação do próprio dinheiro — não gasto nem receita,
+#: portanto neutras no fluxo (Entrou/Saiu).
+_FLOW_NEUTRAL_CATEGORIES = (
+    INVESTMENT_CATEGORIES | _SELF_TRANSFER_CATEGORIES | _LIABILITY_PAYMENT_CATEGORIES
 )
 
 
 def is_flow_neutral(provider_category: str | None) -> bool:
     """True se a categoria do agregador indica movimentação do próprio dinheiro
-    (investimento ou transferência entre contas próprias), que deve ser
-    desconsiderada de Entrou/Saiu."""
+    (investimento, transferência entre contas próprias ou pagamento de fatura),
+    que deve ser desconsiderada de Entrou/Saiu e escondida do extrato."""
     return (
         provider_category is not None
         and provider_category.strip().lower() in _FLOW_NEUTRAL_CATEGORIES

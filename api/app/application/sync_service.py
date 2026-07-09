@@ -11,6 +11,7 @@ from uuid import UUID, uuid4
 from app.application.categorization_service import CategorizationService
 from app.application.normalization import normalize_transaction
 from app.application.retry import with_retry
+from app.domain.account import AccountType
 from app.domain.connection import (
     ConnectionStatus,
     connection_status_from_item,
@@ -192,6 +193,7 @@ class SyncService:
             raw_by_id = {
                 pt.provider_transaction_id: pt.raw for pt in provider_txs
             }
+            is_credit_card = account.type == AccountType.CREDIT_CARD
             domain_txs = [
                 normalize_transaction(
                     pt,
@@ -203,6 +205,7 @@ class SyncService:
                         if categorizer is not None
                         else None
                     ),
+                    is_credit_card=is_credit_card,
                 )
                 for pt in provider_txs
             ]

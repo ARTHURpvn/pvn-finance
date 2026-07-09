@@ -65,10 +65,10 @@ def test_patrimonio_inclui_investimentos_e_exclui_cartao() -> None:
         ("Investments", True),
         ("Proceeds interests and dividends", True),
         ("Same person transfer", True),  # transferência entre contas próprias
+        ("Credit card payment", True),  # pagamento de fatura (evita duplicar)
         ("AUTOMATIC INVESTMENT", True),  # case-insensitive
         ("Food", False),
         ("Transfer - PIX", False),  # PIX a terceiros continua sendo gasto
-        ("Credit card payment", False),  # pagamento de fatura ainda conta
         (None, False),
     ],
 )
