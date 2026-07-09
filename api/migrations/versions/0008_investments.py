@@ -69,7 +69,7 @@ def upgrade() -> None:
         UPDATE transactions SET is_transfer = true
         WHERE lower(raw->>'category') IN (
             'automatic investment', 'investments',
-            'proceeds interests and dividends'
+            'proceeds interests and dividends', 'same person transfer'
         )
         """
     )

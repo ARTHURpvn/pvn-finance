@@ -6,7 +6,7 @@ Aplica RN-01 (sinal) ao traduzir transações."""
 from uuid import UUID
 
 from app.domain.account import Account, AccountType
-from app.domain.transaction import Transaction, is_investment_flow
+from app.domain.transaction import Transaction, is_flow_neutral
 from app.ports.financial_data_port import ProviderAccount, ProviderTransaction
 
 
@@ -52,5 +52,5 @@ def normalize_transaction(
         description=provider.description,
         counterpart=provider.counterpart,
         category_id=category_id,
-        is_transfer=is_investment_flow(provider.provider_category),
+        is_transfer=is_flow_neutral(provider.provider_category),
     )

@@ -17,21 +17,29 @@ class Direction(StrEnum):
         return cls.IN if amount >= 0 else cls.OUT
 
 
-#: Categorias do agregador que representam movimentação entre a conta e
-#: investimentos próprios (aplicação automática, resgate, proventos). São
-#: neutras no fluxo: não são gasto nem receita — o valor vive no patrimônio
-#: via os investimentos. Ex.: BB Rende Fácil, Aplicação RDB.
-_INVESTMENT_FLOW_CATEGORIES = frozenset(
-    {"automatic investment", "investments", "proceeds interests and dividends"}
+#: Categorias do agregador que são movimentação do próprio dinheiro — não
+#: gasto nem receita, portanto neutras no fluxo (Entrou/Saiu):
+#: - investimento próprio (aplicação/resgate/proventos) — o valor vive no
+#:   patrimônio via os investimentos. Ex.: BB Rende Fácil, Aplicação RDB.
+#: - transferência entre contas do mesmo titular. Ex.: PIX de uma conta sua
+#:   para outra sua ("Same person transfer").
+_FLOW_NEUTRAL_CATEGORIES = frozenset(
+    {
+        "automatic investment",
+        "investments",
+        "proceeds interests and dividends",
+        "same person transfer",
+    }
 )
 
 
-def is_investment_flow(provider_category: str | None) -> bool:
-    """True se a categoria do agregador indica movimentação de investimento
-    próprio (deve ser desconsiderada de Entrou/Saiu)."""
+def is_flow_neutral(provider_category: str | None) -> bool:
+    """True se a categoria do agregador indica movimentação do próprio dinheiro
+    (investimento ou transferência entre contas próprias), que deve ser
+    desconsiderada de Entrou/Saiu."""
     return (
         provider_category is not None
-        and provider_category.strip().lower() in _INVESTMENT_FLOW_CATEGORIES
+        and provider_category.strip().lower() in _FLOW_NEUTRAL_CATEGORIES
     )
 
 

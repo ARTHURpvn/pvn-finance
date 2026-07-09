@@ -7,7 +7,7 @@ import pytest
 
 from app.domain.account import Account, AccountType, consolidated_balance
 from app.domain.investment import Investment, total_invested
-from app.domain.transaction import is_investment_flow
+from app.domain.transaction import is_flow_neutral
 
 
 def _account(type_: AccountType, balance: str) -> Account:
@@ -64,11 +64,13 @@ def test_patrimonio_inclui_investimentos_e_exclui_cartao() -> None:
         ("Automatic investment", True),
         ("Investments", True),
         ("Proceeds interests and dividends", True),
+        ("Same person transfer", True),  # transferência entre contas próprias
         ("AUTOMATIC INVESTMENT", True),  # case-insensitive
         ("Food", False),
-        ("Transfer", False),
+        ("Transfer - PIX", False),  # PIX a terceiros continua sendo gasto
+        ("Credit card payment", False),  # pagamento de fatura ainda conta
         (None, False),
     ],
 )
-def test_is_investment_flow(category: str | None, expected: bool) -> None:
-    assert is_investment_flow(category) is expected
+def test_is_flow_neutral(category: str | None, expected: bool) -> None:
+    assert is_flow_neutral(category) is expected
