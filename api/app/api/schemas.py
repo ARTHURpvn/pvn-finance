@@ -74,9 +74,10 @@ class AccountResponse(BaseModel):
 
 
 class AccountSummary(BaseModel):
-    total: str  # patrimônio: contas de depósito + investimentos (RN-02)
-    cash: str  # só saldo em conta
-    investments: str  # soma dos investimentos (ex.: Rende Fácil, CDB)
+    total: str  # saldo disponível: contas de depósito + reservas de liquidez
+    cash: str  # só saldo em conta corrente
+    reserves: str  # reservas de liquidez (Rende Fácil) — contam no saldo
+    investments: str  # investimentos de prazo (CDB, fundos) — à parte
     credit_card: str
 
 
@@ -84,6 +85,7 @@ class InvestmentResponse(BaseModel):
     name: str
     type: str
     balance: str
+    is_reserve: bool  # reserva de liquidez (conta como saldo do banco)
 
 
 class AccountsResponse(BaseModel):

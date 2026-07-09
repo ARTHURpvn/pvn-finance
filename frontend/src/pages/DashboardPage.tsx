@@ -138,7 +138,10 @@ export function DashboardPage() {
     for (const a of accounts?.accounts ?? []) {
       if (a.type !== 'credit_card') add(a.name, a.balance)
     }
-    for (const inv of accounts?.investments ?? []) add(inv.name, inv.balance)
+    // Só reservas de liquidez (Rende Fácil) entram no saldo do banco;
+    // investimentos de prazo (CDB, fundos) ficam à parte.
+    for (const inv of accounts?.investments ?? [])
+      if (inv.is_reserve) add(inv.name, inv.balance)
     return [...map.values()].sort((a, b) => b.total - a.total)
   })()
   const topCats = byCategory.slice(0, 5)
@@ -182,10 +185,15 @@ export function DashboardPage() {
           <div style={{ ...display, fontSize: 42, lineHeight: 1.05 }}>
             {money(accounts?.summary.total ?? '0')}
           </div>
+          {Number(accounts?.summary.reserves ?? '0') > 0 && (
+            <div style={{ fontSize: 12.5, opacity: 0.8 }}>
+              Em conta: {money(accounts?.summary.cash ?? '0')} · reserva:{' '}
+              {money(accounts?.summary.reserves ?? '0')}
+            </div>
+          )}
           {Number(accounts?.summary.investments ?? '0') > 0 && (
             <div style={{ fontSize: 12.5, opacity: 0.8 }}>
-              Em conta: {money(accounts?.summary.cash ?? '0')} · investido:{' '}
-              {money(accounts?.summary.investments ?? '0')}
+              Investido (fora do saldo): {money(accounts?.summary.investments ?? '0')}
             </div>
           )}
           <div style={{ fontSize: 12.5, opacity: 0.8 }}>

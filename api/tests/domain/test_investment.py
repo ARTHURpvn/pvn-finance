@@ -6,7 +6,12 @@ from uuid import uuid4
 import pytest
 
 from app.domain.account import Account, AccountType, consolidated_balance
-from app.domain.investment import Investment, total_invested
+from app.domain.investment import (
+    Investment,
+    is_liquid_reserve,
+    total_invested,
+    total_reserves,
+)
 from app.domain.transaction import is_flow_neutral
 
 
@@ -23,39 +28,49 @@ def _account(type_: AccountType, balance: str) -> Account:
     )
 
 
-def _investment(balance: str) -> Investment:
+def _investment(balance: str, name: str = "CDB - NU FINANCEIRA") -> Investment:
     return Investment(
         id=uuid4(),
         user_id=uuid4(),
         connection_id=uuid4(),
         provider_investment_id="i",
-        name="BB Rende Fácil",
-        type="MUTUAL_FUND",
+        name=name,
+        type="FIXED_INCOME",
         balance=Decimal(balance),
     )
 
 
-def test_total_invested_sums_balances() -> None:
-    assert total_invested([_investment("100.00"), _investment("50.50")]) == Decimal(
-        "150.50"
-    )
+def test_is_liquid_reserve() -> None:
+    assert is_liquid_reserve(_investment("1", "BB Renda Fixa Simples Reserva"))
+    assert is_liquid_reserve(_investment("1", "BB Rende Fácil"))
+    assert not is_liquid_reserve(_investment("1", "CDB - NU FINANCEIRA"))
 
 
-def test_total_invested_empty_is_zero() -> None:
-    assert total_invested([]) == Decimal("0")
+def test_total_invested_excludes_reserves() -> None:
+    invs = [
+        _investment("100.00", "CDB - NU FINANCEIRA"),  # prazo
+        _investment("50.50", "BB Rende Fácil Reserva"),  # reserva (não conta)
+    ]
+    assert total_invested(invs) == Decimal("100.00")
+    assert total_reserves(invs) == Decimal("50.50")
 
 
-def test_patrimonio_inclui_investimentos_e_exclui_cartao() -> None:
+def test_patrimonio_reserva_no_saldo_investimento_a_parte() -> None:
     accounts = [
         _account(AccountType.CHECKING, "774.81"),
         _account(AccountType.CREDIT_CARD, "1956.00"),
     ]
-    bal = consolidated_balance(accounts, investments_total=Decimal("1175.44"))
+    bal = consolidated_balance(
+        accounts,
+        reserves_total=Decimal("1000.00"),  # Rende Fácil → conta no total
+        investments_total=Decimal("1175.44"),  # CDB → à parte
+    )
 
     assert bal.cash == Decimal("774.81")
-    assert bal.investments == Decimal("1175.44")
+    assert bal.reserves == Decimal("1000.00")
+    assert bal.investments == Decimal("1175.44")  # fora do total
     assert bal.credit_card == Decimal("1956.00")  # à parte (passivo)
-    assert bal.total == Decimal("1950.25")  # 774.81 + 1175.44 (sem cartão)
+    assert bal.total == Decimal("1774.81")  # cash 774.81 + reserva 1000
 
 
 @pytest.mark.parametrize(
