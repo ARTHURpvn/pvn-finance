@@ -3,54 +3,54 @@
 
 @custom-variant dark (&:is(.dark *));
 
-/* ===== Design tokens (Claude Design — "fin.") ===== */
+/* ===== Design tokens (paleta "workhub" — laranja sobre neutros quentes) ===== */
 :root {
-  --bg: #f5f6fb;
-  --panel: #ffffff;
-  --panel-2: #f3f4fa;
-  --fill: #eef0f7;
-  --ink: #15162e;
-  --ink-soft: #6b6d85;
-  --line: #e6e7f0;
-  --line-2: #d9dbe7;
-  --accent: #4f46e5;
+  --bg: #f4f1ea;
+  --panel: #fbfaf6;
+  --panel-2: #f3efe6;
+  --fill: #ece6d9;
+  --ink: #2a2620;
+  --ink-soft: #5f594f;
+  --line: #e3dccd;
+  --line-2: #d4cab8;
+  --accent: #c96442;
   --accent-ink: #ffffff;
-  --accent2: #0ea5a4;
-  --ok: #0e9f6e;
-  --danger: #e5484d;
-  --gold: #f59e0b;
-  --info: #2f7df0;
-  --pos: #0e9f6e;
-  --dark-card: #1b1d3a;
-  --dark-ink: #f3f3ff;
-  --dark-soft: #b9bad8;
-  --shadow-sm: 0 1px 2px rgba(20, 22, 50, 0.06);
-  --shadow: 0 12px 30px rgba(20, 22, 50, 0.1);
+  --accent2: #8a4fd8;
+  --ok: #3f8f55;
+  --danger: #cf5a3c;
+  --gold: #c2871f;
+  --info: #4a72c4;
+  --pos: #3f8f55;
+  --dark-card: #2a2620;
+  --dark-ink: #fbfaf6;
+  --dark-soft: #b9b1a3;
+  --shadow-sm: 0 1px 2px rgba(60, 50, 35, 0.06), 0 1px 3px rgba(60, 50, 35, 0.05);
+  --shadow: 0 12px 30px rgba(60, 50, 35, 0.12);
 
   --sans: "Manrope", system-ui, sans-serif;
   --display: "Space Grotesk", system-ui, sans-serif;
 }
 
 [data-theme="dark"] {
-  --bg: #0b0d15;
-  --panel: #151826;
-  --panel-2: #10131e;
-  --fill: #1d2030;
-  --ink: #edeef7;
-  --ink-soft: #9698b4;
-  --line: #252839;
-  --line-2: #2f3346;
-  --accent: #7c74ff;
-  --accent-ink: #ffffff;
-  --accent2: #2dd4cf;
-  --ok: #34d399;
-  --danger: #ff5c6a;
-  --gold: #fbbf24;
-  --info: #5b9cf8;
-  --pos: #34d399;
-  --dark-card: #080a12;
-  --dark-ink: #f3f3ff;
-  --dark-soft: #b9bad8;
+  --bg: #121316;
+  --panel: #1b1c20;
+  --panel-2: #232428;
+  --fill: #2d2e33;
+  --ink: #ededf0;
+  --ink-soft: #b5b6bd;
+  --line: #2a2b30;
+  --line-2: #383940;
+  --accent: #e8895f;
+  --accent-ink: #121316;
+  --accent2: #b08ce8;
+  --ok: #5fb074;
+  --danger: #e0795a;
+  --gold: #d6a445;
+  --info: #7a9be0;
+  --pos: #5fb074;
+  --dark-card: #0e0f11;
+  --dark-ink: #ededf0;
+  --dark-soft: #b5b6bd;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow: 0 14px 34px rgba(0, 0, 0, 0.55);
 }
