@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Card } from '@/components/Card'
+import { TransactionRow } from '@/components/TransactionRow'
 import { IconArrowIn, IconArrowOut } from '@/components/icons'
 import { display } from '@/lib/styles'
 import { apiFetch } from '@/lib/api'
-import { formatDate } from '@/lib/format'
+import { bankOf } from '@/lib/banks'
 import { useUi } from '@/lib/ui'
 import type { AccountsResponse, DashboardSummary, TransactionsPage } from '@/lib/types'
 
@@ -105,7 +106,9 @@ export function DashboardPage() {
         `/dashboard/by-category?from=${monthStart}&to=${monthEnd}`,
       ),
       apiFetch<TimelinePoint[]>('/dashboard/timeline'),
-      apiFetch<TransactionsPage>('/transactions?page=1&page_size=5'),
+      apiFetch<TransactionsPage>(
+        '/transactions?page=1&page_size=6&exclude_transfers=true',
+      ),
     ])
       .then(([a, s, c, t, r]) => {
         setAccounts(a)
@@ -121,6 +124,19 @@ export function DashboardPage() {
   if (loading) return <p style={{ color: 'var(--ink-soft)' }}>Carregando…</p>
 
   const monthLabel = MESES[new Date().getMonth()]
+  // Saldo por banco: agrupa as contas de depósito (exclui cartão) por instituição.
+  const banks = (() => {
+    const map = new Map<string, { label: string; logo: string; total: number }>()
+    for (const a of accounts?.accounts ?? []) {
+      if (a.type === 'credit_card') continue
+      const bank = bankOf(a.name)
+      if (!bank) continue
+      const cur = map.get(bank.key) ?? { label: bank.label, logo: bank.logo, total: 0 }
+      cur.total += Number(a.balance)
+      map.set(bank.key, cur)
+    }
+    return [...map.values()].sort((a, b) => b.total - a.total)
+  })()
   const topCats = byCategory.slice(0, 5)
   const catTotal = byCategory.reduce((a, c) => a + Number(c.total), 0) || 1
   const donut = donutGradient(topCats.map((c) => Number(c.total)))
@@ -171,6 +187,39 @@ export function DashboardPage() {
           <div style={{ fontSize: 12.5, opacity: 0.8 }}>
             Cartão de crédito à parte: {money(accounts?.summary.credit_card ?? '0')}
           </div>
+          {banks.length > 0 && (
+            <div
+              style={{
+                marginTop: 10,
+                paddingTop: 12,
+                borderTop: '1px solid rgba(255,255,255,.22)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 8,
+              }}
+            >
+              {banks.map((b) => (
+                <div
+                  key={b.label}
+                  style={{ display: 'flex', alignItems: 'center', gap: 9 }}
+                >
+                  <img
+                    src={b.logo}
+                    alt={b.label}
+                    width={22}
+                    height={22}
+                    style={{ width: 22, height: 22, borderRadius: 6, background: '#fff' }}
+                  />
+                  <span style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>
+                    {b.label}
+                  </span>
+                  <span style={{ ...display, fontSize: 14 }}>
+                    {money(b.total)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         <Card className="u-card-hover" style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
@@ -322,23 +371,8 @@ export function DashboardPage() {
           </Link>
         </div>
         {recent && recent.items.length > 0 ? (
-          recent.items.map((t) => (
-            <div key={t.id} className="u-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '11px 8px', borderRadius: 10 }}>
-              <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <span style={{ width: 36, height: 36, borderRadius: 10, background: t.direction === 'in' ? 'color-mix(in srgb, var(--ok) 14%, transparent)' : 'var(--fill)', color: t.direction === 'in' ? 'var(--ok)' : 'var(--ink-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {t.direction === 'in' ? <IconArrowIn size={17} /> : <IconArrowOut size={17} />}
-                </span>
-                <span>
-                  <span style={{ fontSize: 14, fontWeight: 600, display: 'block' }}>{t.description}</span>
-                  <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>
-                    {formatDate(t.date)} · {t.category_name ?? 'Sem categoria'}
-                  </span>
-                </span>
-              </span>
-              <span style={{ ...display, fontWeight: 600, fontSize: 15, color: t.direction === 'in' ? 'var(--ok)' : 'var(--danger)' }}>
-                {money(t.amount)}
-              </span>
-            </div>
+          recent.items.map((t, i) => (
+            <TransactionRow key={t.id} tx={t} borderTop={i > 0} />
           ))
         ) : (
           <div style={{ color: 'var(--ink-soft)', fontSize: 13, padding: '12px 8px' }}>

@@ -51,6 +51,7 @@ export interface Transaction {
   id: string
   account_id: string
   account_type: string | null
+  account_name: string | null
   date: string
   amount: string
   direction: 'in' | 'out'
