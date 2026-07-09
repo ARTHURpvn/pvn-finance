@@ -27,10 +27,21 @@ def test_access_token_roundtrip() -> None:
 
 def test_decode_rejects_wrong_token_type() -> None:
     tokens = JwtTokenService()
-    refresh = tokens.create_refresh("user-123")
+    refresh = tokens.create_refresh("user-123", jti="j1", family_id="f1")
 
     with pytest.raises(TokenError):
         tokens.decode(refresh, expected_type="access")
+
+
+def test_refresh_token_carries_jti_and_family() -> None:
+    tokens = JwtTokenService()
+    refresh = tokens.create_refresh("user-123", jti="j-abc", family_id="f-xyz")
+
+    payload = tokens.decode(refresh, expected_type="refresh")
+
+    assert payload["jti"] == "j-abc"
+    assert payload["fid"] == "f-xyz"
+    assert payload["sub"] == "user-123"
 
 
 def test_decode_rejects_tampered_token() -> None:

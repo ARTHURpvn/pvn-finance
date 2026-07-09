@@ -3,7 +3,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -16,6 +16,7 @@ from app.config import get_settings
 from app.domain.user import User
 from app.infrastructure.connection_repository import SqlConnectionRepository
 from app.infrastructure.db import get_session
+from app.infrastructure.refresh_token_repository import SqlRefreshTokenRepository
 from app.infrastructure.security import Argon2PasswordHasher, JwtTokenService
 from app.infrastructure.user_repository import SqlUserRepository
 from app.ports.financial_data_port import FinancialDataPort
@@ -31,6 +32,8 @@ def get_auth_service(session: SessionDep) -> AuthService:
         users=SqlUserRepository(session),
         hasher=Argon2PasswordHasher(),
         tokens=JwtTokenService(),
+        refresh_tokens=SqlRefreshTokenRepository(session),
+        refresh_ttl_minutes=get_settings().jwt_refresh_expire_minutes,
     )
 
 
@@ -58,6 +61,16 @@ def get_current_user(
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def enforce_api_rate_limit(current_user: CurrentUser, request: Request) -> None:
+    """Rate limit por usuário em endpoints caros (sync, dashboard)."""
+    from app.api.rate_limit import enforce, get_api_limiter
+
+    enforce(get_api_limiter(), f"{current_user.id}:{request.url.path}")
+
+
+ApiRateLimit = Depends(enforce_api_rate_limit)
 
 
 def get_financial_adapter() -> FinancialDataPort:

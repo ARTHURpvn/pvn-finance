@@ -4,7 +4,12 @@ from uuid import UUID
 
 from fastapi import APIRouter, status
 
-from app.api.deps import ConnectionServiceDep, CurrentUser, SyncServiceDep
+from app.api.deps import (
+    ApiRateLimit,
+    ConnectionServiceDep,
+    CurrentUser,
+    SyncServiceDep,
+)
 from app.api.errors import api_error
 from app.api.schemas import (
     ConnectionResponse,
@@ -86,7 +91,11 @@ def get_connection(
     return _to_response(connection)
 
 
-@router.post("/{connection_id}/sync", response_model=SyncResultResponse)
+@router.post(
+    "/{connection_id}/sync",
+    response_model=SyncResultResponse,
+    dependencies=[ApiRateLimit],
+)
 def sync_connection(
     connection_id: UUID, current_user: CurrentUser, service: SyncServiceDep
 ) -> SyncResultResponse:

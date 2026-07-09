@@ -5,7 +5,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query
 
-from app.api.deps import CurrentUser, SessionDep
+from app.api.deps import ApiRateLimit, CurrentUser, SessionDep
 from app.api.schemas import (
     CategorySpendResponse,
     DashboardSummary,
@@ -13,7 +13,9 @@ from app.api.schemas import (
 )
 from app.infrastructure.dashboard_repository import SqlDashboardRepository
 
-router = APIRouter(prefix="/dashboard", tags=["dashboard"])
+router = APIRouter(
+    prefix="/dashboard", tags=["dashboard"], dependencies=[ApiRateLimit]
+)
 
 DateFrom = Annotated[date_type | None, Query(alias="from")]
 

@@ -34,6 +34,7 @@ class RateLimiter:
 
 
 _limiter: RateLimiter | None = None
+_api_limiter: RateLimiter | None = None
 
 
 def get_auth_limiter() -> RateLimiter:
@@ -46,10 +47,28 @@ def get_auth_limiter() -> RateLimiter:
     return _limiter
 
 
-def auth_rate_limit(request: Request) -> None:
-    limiter = get_auth_limiter()
-    client = request.client.host if request.client else "unknown"
-    key = f"{client}:{request.url.path}"
+def get_api_limiter() -> RateLimiter:
+    global _api_limiter
+    if _api_limiter is None:
+        settings = get_settings()
+        _api_limiter = RateLimiter(
+            settings.api_rate_limit_max, settings.api_rate_limit_window_seconds
+        )
+    return _api_limiter
+
+
+def client_ip(request: Request) -> str:
+    """IP do cliente para o rate limit. Só confia em X-Forwarded-For quando
+    TRUST_FORWARDED_FOR estiver ligado (atrás de proxy confiável); caso
+    contrário usa o IP do socket, que o cliente não controla."""
+    if get_settings().trust_forwarded_for:
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            return forwarded.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+
+def enforce(limiter: RateLimiter, key: str) -> None:
     retry_after = limiter.hit(key, time.monotonic())
     if retry_after is not None:
         raise HTTPException(
@@ -59,3 +78,7 @@ def auth_rate_limit(request: Request) -> None:
             ),
             headers={"Retry-After": str(int(retry_after))},
         )
+
+
+def auth_rate_limit(request: Request) -> None:
+    enforce(get_auth_limiter(), f"{client_ip(request)}:{request.url.path}")

@@ -26,7 +26,14 @@ class Argon2PasswordHasher:
 class JwtTokenService:
     """Implementa TokenService com JWT assinado em HS256."""
 
-    def _create(self, subject: str, *, minutes: int, token_type: str) -> str:
+    def _create(
+        self,
+        subject: str,
+        *,
+        minutes: int,
+        token_type: str,
+        extra: dict[str, str] | None = None,
+    ) -> str:
         settings = get_settings()
         now = datetime.now(UTC)
         payload = {
@@ -34,6 +41,7 @@ class JwtTokenService:
             "type": token_type,
             "iat": now,
             "exp": now + timedelta(minutes=minutes),
+            **(extra or {}),
         }
         return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 
@@ -44,23 +52,25 @@ class JwtTokenService:
             token_type="access",
         )
 
-    def create_refresh(self, subject: str) -> str:
+    def create_refresh(self, subject: str, *, jti: str, family_id: str) -> str:
         return self._create(
             subject,
             minutes=get_settings().jwt_refresh_expire_minutes,
             token_type="refresh",
+            extra={"jti": jti, "fid": family_id},
         )
 
     def decode(self, token: str, *, expected_type: str) -> dict[str, str]:
         settings = get_settings()
         try:
             payload = jwt.decode(
-                token, settings.jwt_secret, algorithms=[settings.jwt_algorithm]
+                token,
+                settings.jwt_secret,
+                algorithms=[settings.jwt_algorithm],
+                options={"require": ["exp", "iat", "sub"]},
             )
         except jwt.PyJWTError as exc:
             raise TokenError("token inválido ou expirado") from exc
         if payload.get("type") != expected_type:
             raise TokenError("tipo de token inesperado")
-        if "sub" not in payload:
-            raise TokenError("token sem subject")
         return payload

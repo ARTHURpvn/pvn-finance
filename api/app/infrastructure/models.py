@@ -40,6 +40,34 @@ class UserModel(Base):
     )
 
 
+class RefreshTokenModel(Base):
+    """Refresh token emitido (F3). Guardado por `jti` para permitir rotação,
+    revogação e detecção de reuso (todos os jti de uma `family_id` caem juntos
+    ao detectar replay)."""
+
+    __tablename__ = "refresh_tokens"
+
+    jti: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    family_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False, index=True
+    )
+    revoked: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False
+    )
+    expires_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+
+
 class CategoryModel(Base):
     __tablename__ = "categories"
 
