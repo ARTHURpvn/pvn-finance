@@ -24,7 +24,8 @@ export function ExtratoPage() {
     const params = new URLSearchParams({
       page: String(page),
       page_size: String(PAGE_SIZE),
-      exclude_investments: 'true', // não polui o extrato com Rende Fácil e afins
+      exclude_transfers: 'true', // esconde movimentação interna (Rende Fácil,
+      // transferência entre contas próprias, pagamento de fatura)
     })
     if (q) params.set('q', q)
     try {

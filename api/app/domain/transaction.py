@@ -40,20 +40,11 @@ _FLOW_NEUTRAL_CATEGORIES = (
 
 def is_flow_neutral(provider_category: str | None) -> bool:
     """True se a categoria do agregador indica movimentação do próprio dinheiro
-    (investimento ou transferência entre contas próprias), que deve ser
-    desconsiderada de Entrou/Saiu."""
+    (investimento, transferência entre contas próprias ou pagamento de fatura),
+    que deve ser desconsiderada de Entrou/Saiu e escondida do extrato."""
     return (
         provider_category is not None
         and provider_category.strip().lower() in _FLOW_NEUTRAL_CATEGORIES
-    )
-
-
-def is_investment_movement(provider_category: str | None) -> bool:
-    """True se a transação é movimentação de investimento próprio (Rende Fácil
-    e afins), que deve ser escondida do extrato."""
-    return (
-        provider_category is not None
-        and provider_category.strip().lower() in INVESTMENT_CATEGORIES
     )
 
 
