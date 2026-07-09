@@ -87,6 +87,7 @@ export function DashboardPage() {
   const [byCategory, setByCategory] = useState<CategorySpend[]>([])
   const [timeline, setTimeline] = useState<TimelinePoint[]>([])
   const [recent, setRecent] = useState<TransactionsPage | null>(null)
+  const [netByAccount, setNetByAccount] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -109,13 +110,17 @@ export function DashboardPage() {
       apiFetch<TransactionsPage>(
         '/transactions?page=1&page_size=6&exclude_transfers=true',
       ),
+      apiFetch<{ account_id: string; net: string }[]>(
+        `/dashboard/by-account?from=${monthStart}&to=${monthEnd}`,
+      ),
     ])
-      .then(([a, s, c, t, r]) => {
+      .then(([a, s, c, t, r, n]) => {
         setAccounts(a)
         setSummary(s)
         setByCategory(c)
         setTimeline(t)
         setRecent(r)
+        setNetByAccount(Object.fromEntries(n.map((x) => [x.account_id, x.net])))
       })
       .catch(() => toast.error('Falha ao carregar o painel'))
       .finally(() => setLoading(false))
@@ -124,19 +129,45 @@ export function DashboardPage() {
   if (loading) return <p style={{ color: 'var(--ink-soft)' }}>Carregando…</p>
 
   const monthLabel = MESES[new Date().getMonth()]
-  // Saldo por banco: agrupa as contas de depósito (exclui cartão) por instituição.
+  // Saldo por banco (híbrido): usa o saldo real do banco = conta corrente +
+  // reservas de liquidez (Rende Fácil) daquele banco. Quando esse saldo vem
+  // zerado (sandbox zera os balances), cai no líquido do mês (Entrou − Saiu)
+  // como aproximação. Com o banco real conectado o saldo real prevalece.
   const banks = (() => {
-    const map = new Map<string, { label: string; logo: string; total: number }>()
+    const map = new Map<
+      string,
+      { label: string; logo: string; balance: number; net: number }
+    >()
+    const bucket = (key: string, label: string, logo: string) => {
+      const cur = map.get(key) ?? { label, logo, balance: 0, net: 0 }
+      map.set(key, cur)
+      return cur
+    }
     for (const a of accounts?.accounts ?? []) {
       if (a.type === 'credit_card') continue
       const bank = bankOf(a.name)
       if (!bank) continue
-      const cur = map.get(bank.key) ?? { label: bank.label, logo: bank.logo, total: 0 }
-      cur.total += Number(a.balance)
-      map.set(bank.key, cur)
+      const cur = bucket(bank.key, bank.label, bank.logo)
+      cur.balance += Number(a.balance ?? '0')
+      cur.net += Number(netByAccount[a.id] ?? '0')
     }
-    return [...map.values()].sort((a, b) => b.total - a.total)
+    for (const inv of accounts?.investments ?? []) {
+      if (!inv.is_reserve) continue
+      const bank = bankOf(inv.name)
+      if (!bank) continue
+      bucket(bank.key, bank.label, bank.logo).balance += Number(inv.balance ?? '0')
+    }
+    return [...map.values()]
+      .map((b) => ({
+        label: b.label,
+        logo: b.logo,
+        total: b.balance !== 0 ? b.balance : b.net,
+      }))
+      .sort((a, b) => b.total - a.total)
   })()
+  // Patrimônio total = soma dos saldos por banco (mantém total e bancos
+  // coerentes). Investimentos de prazo ficam à parte (fora do saldo).
+  const patrimonioTotal = banks.reduce((a, b) => a + b.total, 0)
   const topCats = byCategory.slice(0, 5)
   const catTotal = byCategory.reduce((a, c) => a + Number(c.total), 0) || 1
   const donut = donutGradient(topCats.map((c) => Number(c.total)))
@@ -176,12 +207,17 @@ export function DashboardPage() {
             Patrimônio total
           </div>
           <div style={{ ...display, fontSize: 42, lineHeight: 1.05 }}>
-            {money(accounts?.summary.total ?? '0')}
+            {money(patrimonioTotal)}
           </div>
+          {Number(accounts?.summary.reserves ?? '0') > 0 && (
+            <div style={{ fontSize: 12.5, opacity: 0.8 }}>
+              Em conta: {money(accounts?.summary.cash ?? '0')} · reserva:{' '}
+              {money(accounts?.summary.reserves ?? '0')}
+            </div>
+          )}
           {Number(accounts?.summary.investments ?? '0') > 0 && (
             <div style={{ fontSize: 12.5, opacity: 0.8 }}>
-              Em conta: {money(accounts?.summary.cash ?? '0')} · investido:{' '}
-              {money(accounts?.summary.investments ?? '0')}
+              Investido (fora do saldo): {money(accounts?.summary.investments ?? '0')}
             </div>
           )}
           <div style={{ fontSize: 12.5, opacity: 0.8 }}>

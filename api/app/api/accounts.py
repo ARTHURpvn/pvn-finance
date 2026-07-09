@@ -5,9 +5,14 @@ from decimal import Decimal
 from fastapi import APIRouter
 
 from app.api.deps import CurrentUser, SessionDep
-from app.api.schemas import AccountResponse, AccountsResponse, AccountSummary
+from app.api.schemas import (
+    AccountResponse,
+    AccountsResponse,
+    AccountSummary,
+    InvestmentResponse,
+)
 from app.domain.account import consolidated_balance
-from app.domain.investment import total_invested
+from app.domain.investment import is_liquid_reserve, total_invested, total_reserves
 from app.infrastructure.account_repository import SqlAccountRepository
 from app.infrastructure.investment_repository import SqlInvestmentRepository
 
@@ -19,7 +24,9 @@ def list_accounts(current_user: CurrentUser, session: SessionDep) -> AccountsRes
     accounts = SqlAccountRepository(session).list_by_user(current_user.id)
     investments = SqlInvestmentRepository(session).list_by_user(current_user.id)
     balance = consolidated_balance(
-        accounts, investments_total=total_invested(investments)
+        accounts,
+        reserves_total=total_reserves(investments),
+        investments_total=total_invested(investments),
     )
     return AccountsResponse(
         accounts=[
@@ -34,9 +41,19 @@ def list_accounts(current_user: CurrentUser, session: SessionDep) -> AccountsRes
             )
             for a in accounts
         ],
+        investments=[
+            InvestmentResponse(
+                name=i.name,
+                type=i.type,
+                balance=str(i.balance),
+                is_reserve=is_liquid_reserve(i),
+            )
+            for i in investments
+        ],
         summary=AccountSummary(
             total=str(balance.total or Decimal("0")),
             cash=str(balance.cash or Decimal("0")),
+            reserves=str(balance.reserves or Decimal("0")),
             investments=str(balance.investments or Decimal("0")),
             credit_card=str(balance.credit_card or Decimal("0")),
         ),
