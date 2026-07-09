@@ -17,6 +17,24 @@ class Direction(StrEnum):
         return cls.IN if amount >= 0 else cls.OUT
 
 
+#: Categorias do agregador que representam movimentação entre a conta e
+#: investimentos próprios (aplicação automática, resgate, proventos). São
+#: neutras no fluxo: não são gasto nem receita — o valor vive no patrimônio
+#: via os investimentos. Ex.: BB Rende Fácil, Aplicação RDB.
+_INVESTMENT_FLOW_CATEGORIES = frozenset(
+    {"automatic investment", "investments", "proceeds interests and dividends"}
+)
+
+
+def is_investment_flow(provider_category: str | None) -> bool:
+    """True se a categoria do agregador indica movimentação de investimento
+    próprio (deve ser desconsiderada de Entrou/Saiu)."""
+    return (
+        provider_category is not None
+        and provider_category.strip().lower() in _INVESTMENT_FLOW_CATEGORIES
+    )
+
+
 @dataclass(frozen=True, slots=True)
 class Transaction:
     """Lançamento de uma conta. Imutável após import (RN-04): só a categoria
@@ -32,6 +50,9 @@ class Transaction:
     description: str
     counterpart: str | None = None
     category_id: UUID | None = None
+    # Movimentação de investimento próprio (aplicação/resgate) — neutra no
+    # fluxo de Entrou/Saiu. O valor é representado no patrimônio via investimentos.
+    is_transfer: bool = False
 
     @classmethod
     def create(
@@ -46,6 +67,7 @@ class Transaction:
         description: str,
         counterpart: str | None = None,
         category_id: UUID | None = None,
+        is_transfer: bool = False,
     ) -> "Transaction":
         """Cria uma transação derivando o sinal do amount (RN-01)."""
         return cls(
@@ -59,6 +81,7 @@ class Transaction:
             description=description,
             counterpart=counterpart,
             category_id=category_id,
+            is_transfer=is_transfer,
         )
 
     def recategorize(self, category_id: UUID) -> "Transaction":

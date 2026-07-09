@@ -5,6 +5,7 @@ from datetime import date as date_type
 
 from app.ports.financial_data_port import (
     ProviderAccount,
+    ProviderInvestment,
     ProviderItem,
     ProviderTransaction,
 )
@@ -18,11 +19,13 @@ class FakeFinancialDataAdapter:
         transactions: dict[str, list[ProviderTransaction]] | None = None,
         connect_token: str = "fake-connect-token",
         item: ProviderItem | None = None,
+        investments: list[ProviderInvestment] | None = None,
     ) -> None:
         self._accounts = accounts or []
         self._transactions = transactions or {}
         self._connect_token = connect_token
         self._item = item
+        self._investments = investments or []
 
     def create_connect_token(
         self,
@@ -41,6 +44,11 @@ class FakeFinancialDataAdapter:
 
     def fetch_accounts(self, *, provider_item_id: str) -> list[ProviderAccount]:
         return list(self._accounts)
+
+    def fetch_investments(
+        self, *, provider_item_id: str
+    ) -> list[ProviderInvestment]:
+        return list(self._investments)
 
     def fetch_transactions(
         self,
