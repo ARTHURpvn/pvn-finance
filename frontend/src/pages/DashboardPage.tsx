@@ -147,9 +147,9 @@ export function DashboardPage() {
             borderRadius: 18,
             padding: '24px 26px',
             background:
-              'linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #9333ea 100%)',
+              'linear-gradient(135deg, #c96442 0%, #b4543a 55%, #9a3f2c 100%)',
             color: '#fff',
-            boxShadow: '0 14px 32px rgba(79,70,229,.30)',
+            boxShadow: '0 14px 32px rgba(201,100,66,.30)',
             display: 'flex',
             flexDirection: 'column',
             gap: 4,
