@@ -32,6 +32,7 @@ def list_transactions(
     to: date_type | None = None,
     category_id: UUID | None = None,
     q: str | None = None,
+    exclude_investments: bool = False,
     page: Annotated[int, Query(ge=1)] = 1,
     page_size: Annotated[int, Query(ge=1, le=100)] = 50,
 ) -> TransactionsPage:
@@ -42,6 +43,7 @@ def list_transactions(
         date_to=to,
         category_id=category_id,
         query=q,
+        exclude_investments=exclude_investments,
         page=page,
         page_size=page_size,
     )

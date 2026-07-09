@@ -21,7 +21,11 @@ export function ExtratoPage() {
 
   const load = useCallback(async () => {
     setLoading(true)
-    const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) })
+    const params = new URLSearchParams({
+      page: String(page),
+      page_size: String(PAGE_SIZE),
+      exclude_investments: 'true', // não polui o extrato com Rende Fácil e afins
+    })
     if (q) params.set('q', q)
     try {
       setData(await apiFetch<TransactionsPage>(`/transactions?${params}`))
@@ -123,8 +127,8 @@ export function ExtratoPage() {
                         borderRadius: 12,
                         background: income
                           ? 'color-mix(in srgb, var(--ok) 14%, transparent)'
-                          : 'var(--fill)',
-                        color: income ? 'var(--ok)' : 'var(--ink-soft)',
+                          : 'color-mix(in srgb, var(--danger) 14%, transparent)',
+                        color: income ? 'var(--ok)' : 'var(--danger)',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',

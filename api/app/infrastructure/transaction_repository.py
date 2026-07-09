@@ -8,7 +8,7 @@ from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
-from app.domain.transaction import Direction, Transaction
+from app.domain.transaction import INVESTMENT_CATEGORIES, Direction, Transaction
 from app.infrastructure.models import TransactionModel
 
 
@@ -41,11 +41,13 @@ class SqlTransactionRepository:
         date_to: date_type | None = None,
         category_id: UUID | None = None,
         query: str | None = None,
+        exclude_investments: bool = False,
         page: int = 1,
         page_size: int = 50,
     ) -> tuple[list[Transaction], int]:
         """Lista transações do usuário com filtros e paginação (FR-010/013).
-        Retorna (itens da página, total de resultados)."""
+        Retorna (itens da página, total de resultados). ``exclude_investments``
+        esconde as movimentações de investimento próprio (ex.: BB Rende Fácil)."""
         conditions = [TransactionModel.user_id == user_id]
         if account_id is not None:
             conditions.append(TransactionModel.account_id == account_id)
@@ -57,6 +59,12 @@ class SqlTransactionRepository:
             conditions.append(TransactionModel.category_id == category_id)
         if query:
             conditions.append(TransactionModel.description.ilike(f"%{query}%"))
+        if exclude_investments:
+            conditions.append(
+                func.lower(
+                    func.coalesce(TransactionModel.raw["category"].astext, "")
+                ).notin_(INVESTMENT_CATEGORIES)
+            )
 
         total = self._session.scalar(
             select(func.count()).select_from(TransactionModel).where(*conditions)

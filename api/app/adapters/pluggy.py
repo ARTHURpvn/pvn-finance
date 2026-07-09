@@ -38,7 +38,9 @@ _API_KEY_TTL_SECONDS = 110 * 60
 
 
 def _parse_date(value: str) -> date_type:
-    """Converte data ISO-8601 do Pluggy (com 'Z') para date."""
+    """Data da transação a partir do timestamp do Pluggy. Usa a data do próprio
+    timestamp (que é a data contábil que o banco reporta) — não converte de
+    fuso, senão transações de madrugada cairiam no dia anterior."""
     return datetime.fromisoformat(value.replace("Z", "+00:00")).date()
 
 

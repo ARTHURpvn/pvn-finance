@@ -124,3 +124,39 @@ def test_transactions_never_expose_raw(client: TestClient) -> None:
         _connect_and_sync(client, headers)
         resp = client.get("/transactions", headers=headers)
     assert "raw" not in resp.text
+
+
+def _fake_with_investment() -> FakeFinancialDataAdapter:
+    account = ProviderAccount(
+        provider_account_id="chk", type="checking", name="C",
+        currency="BRL", balance=Decimal("100.00"),
+    )
+    txs = {
+        "chk": [
+            ProviderTransaction(
+                provider_transaction_id="compra", date=date(2026, 1, 10),
+                amount=Decimal("-50.00"), description="Mercado",
+                provider_category="Groceries", raw={"category": "Groceries"},
+            ),
+            ProviderTransaction(
+                provider_transaction_id="rf", date=date(2026, 1, 11),
+                amount=Decimal("-300.00"), description="RENDE FACIL",
+                provider_category="Automatic investment",
+                raw={"category": "Automatic investment"},
+            ),
+        ]
+    }
+    return FakeFinancialDataAdapter(accounts=[account], transactions=txs)
+
+
+def test_exclude_investments_hides_rende_facil(client: TestClient) -> None:
+    headers = _auth(client, email="f6inv@e.com")
+    with _override_adapter(_fake_with_investment()):
+        _connect_and_sync(client, headers)
+        full = client.get("/transactions", headers=headers).json()
+        filtered = client.get(
+            "/transactions?exclude_investments=true", headers=headers
+        ).json()
+    assert full["total"] == 2  # sem filtro: Mercado + Rende Fácil
+    assert filtered["total"] == 1  # com filtro: Rende Fácil some
+    assert filtered["items"][0]["description"] == "Mercado"

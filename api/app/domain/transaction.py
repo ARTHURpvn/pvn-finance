@@ -17,20 +17,19 @@ class Direction(StrEnum):
         return cls.IN if amount >= 0 else cls.OUT
 
 
-#: Categorias do agregador que são movimentação do próprio dinheiro — não
-#: gasto nem receita, portanto neutras no fluxo (Entrou/Saiu):
-#: - investimento próprio (aplicação/resgate/proventos) — o valor vive no
-#:   patrimônio via os investimentos. Ex.: BB Rende Fácil, Aplicação RDB.
-#: - transferência entre contas do mesmo titular. Ex.: PIX de uma conta sua
-#:   para outra sua ("Same person transfer").
-_FLOW_NEUTRAL_CATEGORIES = frozenset(
-    {
-        "automatic investment",
-        "investments",
-        "proceeds interests and dividends",
-        "same person transfer",
-    }
+#: Movimentação de investimento próprio (aplicação/resgate/proventos). O valor
+#: vive no patrimônio via os investimentos. Ex.: BB Rende Fácil, Aplicação RDB.
+#: São escondidas do extrato (ruído automático) além de neutras no fluxo.
+INVESTMENT_CATEGORIES = frozenset(
+    {"automatic investment", "investments", "proceeds interests and dividends"}
 )
+#: Transferência entre contas do mesmo titular. Ex.: PIX de uma conta sua para
+#: outra sua. Neutra no fluxo, mas continua visível no extrato.
+_SELF_TRANSFER_CATEGORIES = frozenset({"same person transfer"})
+
+#: Categorias que são movimentação do próprio dinheiro — não gasto nem receita,
+#: portanto neutras no fluxo (Entrou/Saiu).
+_FLOW_NEUTRAL_CATEGORIES = INVESTMENT_CATEGORIES | _SELF_TRANSFER_CATEGORIES
 
 
 def is_flow_neutral(provider_category: str | None) -> bool:
@@ -40,6 +39,15 @@ def is_flow_neutral(provider_category: str | None) -> bool:
     return (
         provider_category is not None
         and provider_category.strip().lower() in _FLOW_NEUTRAL_CATEGORIES
+    )
+
+
+def is_investment_movement(provider_category: str | None) -> bool:
+    """True se a transação é movimentação de investimento próprio (Rende Fácil
+    e afins), que deve ser escondida do extrato."""
+    return (
+        provider_category is not None
+        and provider_category.strip().lower() in INVESTMENT_CATEGORIES
     )
 
 
