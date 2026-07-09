@@ -42,8 +42,15 @@ export interface Account {
   balance_updated_at: string | null
 }
 
+export interface Investment {
+  name: string
+  type: string
+  balance: string
+}
+
 export interface AccountsResponse {
   accounts: Account[]
+  investments: Investment[]
   summary: { total: string; cash: string; investments: string; credit_card: string }
 }
 

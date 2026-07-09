@@ -5,7 +5,12 @@ from decimal import Decimal
 from fastapi import APIRouter
 
 from app.api.deps import CurrentUser, SessionDep
-from app.api.schemas import AccountResponse, AccountsResponse, AccountSummary
+from app.api.schemas import (
+    AccountResponse,
+    AccountsResponse,
+    AccountSummary,
+    InvestmentResponse,
+)
 from app.domain.account import consolidated_balance
 from app.domain.investment import total_invested
 from app.infrastructure.account_repository import SqlAccountRepository
@@ -33,6 +38,12 @@ def list_accounts(current_user: CurrentUser, session: SessionDep) -> AccountsRes
                 balance_updated_at=a.balance_updated_at,
             )
             for a in accounts
+        ],
+        investments=[
+            InvestmentResponse(
+                name=i.name, type=i.type, balance=str(i.balance)
+            )
+            for i in investments
         ],
         summary=AccountSummary(
             total=str(balance.total or Decimal("0")),

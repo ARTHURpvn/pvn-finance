@@ -124,17 +124,21 @@ export function DashboardPage() {
   if (loading) return <p style={{ color: 'var(--ink-soft)' }}>Carregando…</p>
 
   const monthLabel = MESES[new Date().getMonth()]
-  // Saldo por banco: agrupa as contas de depósito (exclui cartão) por instituição.
+  // Saldo por banco: contas de depósito (exclui cartão) + investimentos daquele
+  // banco (ex.: o dinheiro do BB aplicado no Rende Fácil entra no saldo do BB).
   const banks = (() => {
     const map = new Map<string, { label: string; logo: string; total: number }>()
-    for (const a of accounts?.accounts ?? []) {
-      if (a.type === 'credit_card') continue
-      const bank = bankOf(a.name)
-      if (!bank) continue
+    const add = (name: string, balance: string) => {
+      const bank = bankOf(name)
+      if (!bank) return
       const cur = map.get(bank.key) ?? { label: bank.label, logo: bank.logo, total: 0 }
-      cur.total += Number(a.balance)
+      cur.total += Number(balance)
       map.set(bank.key, cur)
     }
+    for (const a of accounts?.accounts ?? []) {
+      if (a.type !== 'credit_card') add(a.name, a.balance)
+    }
+    for (const inv of accounts?.investments ?? []) add(inv.name, inv.balance)
     return [...map.values()].sort((a, b) => b.total - a.total)
   })()
   const topCats = byCategory.slice(0, 5)

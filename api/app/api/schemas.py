@@ -80,8 +80,15 @@ class AccountSummary(BaseModel):
     credit_card: str
 
 
+class InvestmentResponse(BaseModel):
+    name: str
+    type: str
+    balance: str
+
+
 class AccountsResponse(BaseModel):
     accounts: list[AccountResponse]
+    investments: list[InvestmentResponse]
     summary: AccountSummary
 
 
