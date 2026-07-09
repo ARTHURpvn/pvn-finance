@@ -60,6 +60,30 @@ class SqlDashboardRepository:
             )
         )
 
+    def net_by_account(
+        self, user_id: UUID, date_from: date_type | None, date_to: date_type | None
+    ) -> dict[UUID, Decimal]:
+        """Líquido (entrou − saiu) por conta de depósito no período — base para
+        o 'saldo do banco = Entrou − Saiu do mês'. Exclui movimentação interna."""
+        conditions = self._date_filter(
+            [
+                TransactionModel.user_id == user_id,
+                TransactionModel.is_transfer.is_(False),
+                self._deposit_only(user_id),
+            ],
+            date_from,
+            date_to,
+        )
+        stmt = (
+            select(
+                TransactionModel.account_id,
+                func.coalesce(func.sum(TransactionModel.amount), _ZERO),
+            )
+            .where(*conditions)
+            .group_by(TransactionModel.account_id)
+        )
+        return {acc_id: net for acc_id, net in self._session.execute(stmt)}
+
     def summary(
         self, user_id: UUID, date_from: date_type | None, date_to: date_type | None
     ) -> Summary:

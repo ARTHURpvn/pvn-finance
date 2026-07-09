@@ -33,6 +33,22 @@ def summary(
     )
 
 
+@router.get("/by-account")
+def by_account(
+    current_user: CurrentUser,
+    session: SessionDep,
+    from_: DateFrom = None,
+    to: date_type | None = None,
+) -> list[dict[str, str]]:
+    """Líquido (entrou − saiu) por conta no período — usado para o saldo do
+    banco = Entrou − Saiu do mês."""
+    nets = SqlDashboardRepository(session).net_by_account(current_user.id, from_, to)
+    return [
+        {"account_id": str(account_id), "net": str(net)}
+        for account_id, net in nets.items()
+    ]
+
+
 @router.get("/by-category", response_model=list[CategorySpendResponse])
 def by_category(
     current_user: CurrentUser,

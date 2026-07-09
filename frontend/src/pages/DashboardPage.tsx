@@ -87,6 +87,7 @@ export function DashboardPage() {
   const [byCategory, setByCategory] = useState<CategorySpend[]>([])
   const [timeline, setTimeline] = useState<TimelinePoint[]>([])
   const [recent, setRecent] = useState<TransactionsPage | null>(null)
+  const [netByAccount, setNetByAccount] = useState<Record<string, string>>({})
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -109,13 +110,17 @@ export function DashboardPage() {
       apiFetch<TransactionsPage>(
         '/transactions?page=1&page_size=6&exclude_transfers=true',
       ),
+      apiFetch<{ account_id: string; net: string }[]>(
+        `/dashboard/by-account?from=${monthStart}&to=${monthEnd}`,
+      ),
     ])
-      .then(([a, s, c, t, r]) => {
+      .then(([a, s, c, t, r, n]) => {
         setAccounts(a)
         setSummary(s)
         setByCategory(c)
         setTimeline(t)
         setRecent(r)
+        setNetByAccount(Object.fromEntries(n.map((x) => [x.account_id, x.net])))
       })
       .catch(() => toast.error('Falha ao carregar o painel'))
       .finally(() => setLoading(false))
@@ -124,24 +129,19 @@ export function DashboardPage() {
   if (loading) return <p style={{ color: 'var(--ink-soft)' }}>Carregando…</p>
 
   const monthLabel = MESES[new Date().getMonth()]
-  // Saldo por banco: contas de depósito (exclui cartão) + investimentos daquele
-  // banco (ex.: o dinheiro do BB aplicado no Rende Fácil entra no saldo do BB).
+  // Saldo por banco = líquido do mês (Entrou − Saiu) das contas de depósito
+  // daquele banco. O balance do agregador vem zerado no sandbox, então usamos o
+  // fluxo do mês como saldo.
   const banks = (() => {
     const map = new Map<string, { label: string; logo: string; total: number }>()
-    const add = (name: string, balance: string) => {
-      const bank = bankOf(name)
-      if (!bank) return
+    for (const a of accounts?.accounts ?? []) {
+      if (a.type === 'credit_card') continue
+      const bank = bankOf(a.name)
+      if (!bank) continue
       const cur = map.get(bank.key) ?? { label: bank.label, logo: bank.logo, total: 0 }
-      cur.total += Number(balance)
+      cur.total += Number(netByAccount[a.id] ?? '0')
       map.set(bank.key, cur)
     }
-    for (const a of accounts?.accounts ?? []) {
-      if (a.type !== 'credit_card') add(a.name, a.balance)
-    }
-    // Só reservas de liquidez (Rende Fácil) entram no saldo do banco;
-    // investimentos de prazo (CDB, fundos) ficam à parte.
-    for (const inv of accounts?.investments ?? [])
-      if (inv.is_reserve) add(inv.name, inv.balance)
     return [...map.values()].sort((a, b) => b.total - a.total)
   })()
   const topCats = byCategory.slice(0, 5)
