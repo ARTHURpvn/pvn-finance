@@ -148,11 +148,6 @@ def _fake_with_transfers() -> FakeFinancialDataAdapter:
                 amount=Decimal("-200.00"), description="Para mim mesmo",
                 provider_category="Same person transfer",
             ),
-            ProviderTransaction(  # pagamento de fatura
-                provider_transaction_id="pgto", date=date(2026, 1, 13),
-                amount=Decimal("-100.00"), description="PGTO CARTAO",
-                provider_category="Credit card payment",
-            ),
         ]
     }
     return FakeFinancialDataAdapter(accounts=[account], transactions=txs)
@@ -166,7 +161,7 @@ def test_exclude_transfers_hides_internal_movements(client: TestClient) -> None:
         filtered = client.get(
             "/transactions?exclude_transfers=true", headers=headers
         ).json()
-    assert full["total"] == 4  # Mercado + Rende Fácil + transf. própria + fatura
-    # com filtro: só o gasto real (Mercado); as 3 movimentações internas somem
+    assert full["total"] == 3  # Mercado + Rende Fácil + transf. própria
+    # com filtro: só o gasto real (Mercado); investimento e transf. própria somem
     assert filtered["total"] == 1
     assert filtered["items"][0]["description"] == "Mercado"

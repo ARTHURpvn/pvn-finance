@@ -185,7 +185,7 @@ export function DashboardPage() {
             </div>
           )}
           <div style={{ fontSize: 12.5, opacity: 0.8 }}>
-            Cartão de crédito à parte: {money(accounts?.summary.credit_card ?? '0')}
+            Fatura do cartão em aberto: {money(accounts?.summary.credit_card ?? '0')}
           </div>
           {banks.length > 0 && (
             <div

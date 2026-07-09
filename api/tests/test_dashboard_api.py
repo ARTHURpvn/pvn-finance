@@ -108,3 +108,48 @@ def test_timeline_monthly(client: TestClient) -> None:
     assert by_month["2026-01"]["in"] == "5000.00"
     assert by_month["2026-01"]["out"] == "200.00"
     assert by_month["2026-02"]["out"] == "300.00"
+
+
+def test_cash_flow_card_purchase_out_bill_in(client: TestClient) -> None:
+    """Modelo de caixa: compra no cartão NÃO conta no Saiu; o pagamento da
+    fatura (que sai da conta de depósito) conta."""
+    headers = _auth(client, email="f8card@e.com")
+    checking = ProviderAccount(
+        provider_account_id="chk", type="checking", name="CC",
+        currency="BRL", balance=Decimal("0"),
+    )
+    card = ProviderAccount(
+        provider_account_id="card", type="credit_card", name="OUROCARD",
+        currency="BRL", balance=Decimal("300.00"),
+    )
+    txs = {
+        "chk": [
+            ProviderTransaction(
+                provider_transaction_id="pgto", date=date(2026, 3, 10),
+                amount=Decimal("-500.00"), description="PGTO CARTAO",
+                provider_category="Credit card payment",
+            ),
+        ],
+        "card": [
+            ProviderTransaction(  # compra no cartão (positivo no cartão)
+                provider_transaction_id="buy", date=date(2026, 3, 5),
+                amount=Decimal("80.00"), description="Loja",
+                provider_category="Shopping",
+            ),
+        ],
+    }
+    fake = FakeFinancialDataAdapter(
+        accounts=[checking, card], transactions=txs
+    )
+    with _override_adapter(fake):
+        client.post(
+            "/connections/register", headers=headers,
+            json={"provider_item_id": "ic", "institution_name": "B"},
+        )
+        cid = client.get("/connections", headers=headers).json()[0]["id"]
+        client.post(f"/connections/{cid}/sync", headers=headers)
+    body = client.get(
+        "/dashboard/summary?from=2026-03-01&to=2026-03-31", headers=headers
+    ).json()
+    # Saiu = só o pagamento da fatura (500); a compra de 80 no cartão não entra.
+    assert body["spent"] == "500.00"

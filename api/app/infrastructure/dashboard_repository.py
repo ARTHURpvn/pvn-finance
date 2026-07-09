@@ -10,7 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.domain.transaction import Direction
-from app.infrastructure.models import CategoryModel, TransactionModel
+from app.infrastructure.models import AccountModel, CategoryModel, TransactionModel
 
 _ZERO = Decimal("0")
 
@@ -48,6 +48,18 @@ class SqlDashboardRepository:
             conditions.append(TransactionModel.date <= date_to)
         return conditions
 
+    @staticmethod
+    def _deposit_only(user_id: UUID):
+        """Fluxo de caixa: considera só contas de depósito. Compras no cartão
+        não são saída de caixa (a fatura é); o pagamento da fatura, que sai da
+        conta de depósito, é que conta como gasto."""
+        return TransactionModel.account_id.in_(
+            select(AccountModel.id).where(
+                AccountModel.user_id == user_id,
+                AccountModel.type != "credit_card",
+            )
+        )
+
     def summary(
         self, user_id: UUID, date_from: date_type | None, date_to: date_type | None
     ) -> Summary:
@@ -55,6 +67,7 @@ class SqlDashboardRepository:
             [
                 TransactionModel.user_id == user_id,
                 TransactionModel.is_transfer.is_(False),
+                self._deposit_only(user_id),
             ],
             date_from,
             date_to,
@@ -84,6 +97,7 @@ class SqlDashboardRepository:
                 TransactionModel.user_id == user_id,
                 TransactionModel.direction == Direction.OUT.value,
                 TransactionModel.is_transfer.is_(False),
+                self._deposit_only(user_id),
             ],
             date_from,
             date_to,
@@ -113,6 +127,7 @@ class SqlDashboardRepository:
             [
                 TransactionModel.user_id == user_id,
                 TransactionModel.is_transfer.is_(False),
+                self._deposit_only(user_id),
             ],
             date_from,
             date_to,
