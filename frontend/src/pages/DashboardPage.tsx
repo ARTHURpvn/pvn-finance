@@ -28,6 +28,11 @@ const PALETTE = [
   'var(--danger)',
 ]
 
+const MESES = [
+  'janeiro', 'fevereiro', 'março', 'abril', 'maio', 'junho',
+  'julho', 'agosto', 'setembro', 'outubro', 'novembro', 'dezembro',
+]
+
 function donutGradient(values: number[]): string {
   const total = values.reduce((a, b) => a + b, 0) || 1
   let acc = 0
@@ -84,10 +89,21 @@ export function DashboardPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    // Entrou/Saiu consideram apenas o mês corrente (não o histórico todo).
+    const now = new Date()
+    const pad = (n: number) => String(n).padStart(2, '0')
+    const monthStart = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-01`
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    const monthEnd = `${lastDay.getFullYear()}-${pad(lastDay.getMonth() + 1)}-${pad(lastDay.getDate())}`
+
     Promise.all([
       apiFetch<AccountsResponse>('/accounts'),
-      apiFetch<DashboardSummary>('/dashboard/summary'),
-      apiFetch<CategorySpend[]>('/dashboard/by-category'),
+      apiFetch<DashboardSummary>(
+        `/dashboard/summary?from=${monthStart}&to=${monthEnd}`,
+      ),
+      apiFetch<CategorySpend[]>(
+        `/dashboard/by-category?from=${monthStart}&to=${monthEnd}`,
+      ),
       apiFetch<TimelinePoint[]>('/dashboard/timeline'),
       apiFetch<TransactionsPage>('/transactions?page=1&page_size=5'),
     ])
@@ -104,6 +120,7 @@ export function DashboardPage() {
 
   if (loading) return <p style={{ color: 'var(--ink-soft)' }}>Carregando…</p>
 
+  const monthLabel = MESES[new Date().getMonth()]
   const topCats = byCategory.slice(0, 5)
   const catTotal = byCategory.reduce((a, c) => a + Number(c.total), 0) || 1
   const donut = donutGradient(topCats.map((c) => Number(c.total)))
@@ -155,7 +172,9 @@ export function DashboardPage() {
             <IconArrowIn size={18} />
           </span>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>Entrou</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>
+              Entrou <span style={{ fontWeight: 500, opacity: 0.75 }}>· {monthLabel}</span>
+            </div>
             <div style={{ ...display, fontSize: 28, color: 'var(--ok)' }}>
               {money(summary?.received ?? '0')}
             </div>
@@ -167,7 +186,9 @@ export function DashboardPage() {
             <IconArrowOut size={18} />
           </span>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>Saiu</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>
+              Saiu <span style={{ fontWeight: 500, opacity: 0.75 }}>· {monthLabel}</span>
+            </div>
             <div style={{ ...display, fontSize: 28, color: 'var(--danger)' }}>
               {money(summary?.spent ?? '0')}
             </div>
