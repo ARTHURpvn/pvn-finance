@@ -67,6 +67,21 @@ class ProviderItem:
     error_code: str | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class ProviderInvestment:
+    """Investimento na forma do agregador (pré-normalização).
+
+    ``balance`` é o valor atual (net worth) da posição — usado para compor o
+    patrimônio total (ex.: BB Rende Fácil, CDBs, fundos)."""
+
+    provider_investment_id: str
+    name: str
+    type: str
+    balance: Decimal
+    currency: str = "BRL"
+    subtype: str | None = None
+
+
 class FinancialDataPort(Protocol):
     """Contrato do agregador: emissão de connect token + leitura de dados."""
 
@@ -90,6 +105,12 @@ class FinancialDataPort(Protocol):
 
     def fetch_accounts(self, *, provider_item_id: str) -> list[ProviderAccount]:
         """Lista as contas de uma conexão."""
+        ...
+
+    def fetch_investments(
+        self, *, provider_item_id: str
+    ) -> list[ProviderInvestment]:
+        """Lista os investimentos de uma conexão (compõem o patrimônio)."""
         ...
 
     def fetch_transactions(

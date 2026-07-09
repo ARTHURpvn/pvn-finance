@@ -186,6 +186,12 @@ class TransactionModel(Base):
             postgresql_using="gin",
             postgresql_ops={"description": "gin_trgm_ops"},
         ),
+        Index(
+            "ix_transactions_user_transfer_date",
+            "user_id",
+            "is_transfer",
+            "date",
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -217,7 +223,45 @@ class TransactionModel(Base):
         ForeignKey("categories.id", ondelete="SET NULL"),
         nullable=True,
     )
+    is_transfer: Mapped[bool] = mapped_column(
+        Boolean, server_default=text("false"), nullable=False
+    )
     raw: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+
+
+class InvestmentModel(Base):
+    __tablename__ = "investments"
+    __table_args__ = (
+        UniqueConstraint(
+            "connection_id",
+            "provider_investment_id",
+            name="uq_investments_connection_provider",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    connection_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("connections.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    provider_investment_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    type: Mapped[str] = mapped_column(String(50), nullable=False)
+    subtype: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
+    currency: Mapped[str] = mapped_column(String(10), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
 
 
 class SyncLogModel(Base):

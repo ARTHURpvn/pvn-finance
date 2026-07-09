@@ -30,19 +30,25 @@ class Account:
 
 @dataclass(frozen=True, slots=True)
 class ConsolidatedBalance:
-    """Resultado de RN-02. ``total`` exclui cartão de crédito (passivo);
-    ``credit_card`` é reportado à parte. ``by_type`` traz o detalhamento."""
+    """Resultado de RN-02. ``total`` é o patrimônio (contas de depósito +
+    investimentos); ``cash`` é só o saldo em conta; ``investments`` a soma dos
+    investimentos; ``credit_card`` (passivo) fica à parte. ``by_type`` detalha
+    as contas."""
 
     total: Decimal
+    cash: Decimal
+    investments: Decimal
     credit_card: Decimal
     by_type: dict[AccountType, Decimal]
 
 
-def consolidated_balance(accounts: Iterable[Account]) -> ConsolidatedBalance:
-    """RN-02: soma os saldos das contas informadas; cartão de crédito NÃO
-    entra no total positivo (é passivo). O chamador deve passar apenas
-    contas ativas."""
-    total = Decimal("0")
+def consolidated_balance(
+    accounts: Iterable[Account], *, investments_total: Decimal = Decimal("0")
+) -> ConsolidatedBalance:
+    """RN-02: soma os saldos das contas de depósito e os investimentos no
+    patrimônio; cartão de crédito NÃO entra no total (é passivo, reportado à
+    parte). O chamador deve passar apenas contas ativas."""
+    cash = Decimal("0")
     credit_card = Decimal("0")
     by_type: dict[AccountType, Decimal] = {}
     for account in accounts:
@@ -50,5 +56,11 @@ def consolidated_balance(accounts: Iterable[Account]) -> ConsolidatedBalance:
         if account.type == AccountType.CREDIT_CARD:
             credit_card += account.balance
         else:
-            total += account.balance
-    return ConsolidatedBalance(total=total, credit_card=credit_card, by_type=by_type)
+            cash += account.balance
+    return ConsolidatedBalance(
+        total=cash + investments_total,
+        cash=cash,
+        investments=investments_total,
+        credit_card=credit_card,
+        by_type=by_type,
+    )

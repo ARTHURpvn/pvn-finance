@@ -10,6 +10,7 @@ from app.config import get_settings
 from app.infrastructure.account_repository import SqlAccountRepository
 from app.infrastructure.category_repository import SqlCategoryRepository
 from app.infrastructure.connection_repository import SqlConnectionRepository
+from app.infrastructure.investment_repository import SqlInvestmentRepository
 from app.infrastructure.rule_repository import SqlRuleRepository
 from app.infrastructure.sync_log_repository import SqlSyncLogRepository
 from app.infrastructure.transaction_repository import SqlTransactionRepository
@@ -40,4 +41,5 @@ def build_sync_service(session: Session, adapter: FinancialDataPort) -> SyncServ
             categories=SqlCategoryRepository(session),
             rules=SqlRuleRepository(session),
         ),
+        investments=SqlInvestmentRepository(session),
     )

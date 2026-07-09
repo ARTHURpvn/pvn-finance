@@ -14,6 +14,7 @@ import httpx
 from app.ports.financial_data_port import (
     AggregatorError,
     ProviderAccount,
+    ProviderInvestment,
     ProviderItem,
     ProviderTransaction,
     RetryableAggregatorError,
@@ -203,6 +204,12 @@ class PluggyAdapter:
         data = self._get("/accounts", {"itemId": provider_item_id})
         return [self._map_account(r) for r in data.get("results", [])]
 
+    def fetch_investments(
+        self, *, provider_item_id: str
+    ) -> list[ProviderInvestment]:
+        data = self._get("/investments", {"itemId": provider_item_id})
+        return [self._map_investment(r) for r in data.get("results", [])]
+
     def fetch_transactions(
         self,
         *,
@@ -243,6 +250,22 @@ class PluggyAdapter:
             name=raw.get("name") or raw.get("marketingName") or "Conta",
             currency=raw.get("currencyCode") or "BRL",
             balance=Decimal(str(raw.get("balance", "0"))),
+        )
+
+    @staticmethod
+    def _map_investment(raw: dict[str, Any]) -> ProviderInvestment:
+        # `balance` é o valor atual (net worth) da posição; cai para `amount`
+        # se ausente. Investimentos zerados (resgatados) têm balance 0.
+        value = raw.get("balance")
+        if value is None:
+            value = raw.get("amount", "0")
+        return ProviderInvestment(
+            provider_investment_id=raw["id"],
+            name=raw.get("name") or "Investimento",
+            type=raw.get("type") or "",
+            subtype=raw.get("subtype"),
+            balance=Decimal(str(value or "0")),
+            currency=raw.get("currencyCode") or "BRL",
         )
 
     @staticmethod
