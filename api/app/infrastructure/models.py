@@ -11,6 +11,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Index,
     Integer,
     LargeBinary,
     Numeric,
@@ -98,6 +99,11 @@ class ConnectionModel(Base):
         UniqueConstraint(
             "provider", "provider_item_id", name="uq_connections_provider_item"
         ),
+        Index(
+            "ix_connections_due",
+            "last_sync_at",
+            postgresql_where=text("status = 'ativa'"),
+        ),
     )
 
     id: Mapped[uuid.UUID] = mapped_column(
@@ -148,7 +154,7 @@ class AccountModel(Base):
         UUID(as_uuid=True),
         ForeignKey("connections.id", ondelete="CASCADE"),
         nullable=False,
-        index=True,
+        # sem index próprio: coberto pelo prefixo de uq_accounts_connection_provider.
     )
     provider_account_id: Mapped[str] = mapped_column(String(255), nullable=False)
     type: Mapped[str] = mapped_column(String(30), nullable=False)
@@ -167,6 +173,18 @@ class TransactionModel(Base):
             "connection_id",
             "provider_transaction_id",
             name="uq_transactions_connection_provider",
+        ),
+        Index(
+            "ix_transactions_user_category_date",
+            "user_id",
+            "category_id",
+            "date",
+        ),
+        Index(
+            "ix_transactions_description_trgm",
+            "description",
+            postgresql_using="gin",
+            postgresql_ops={"description": "gin_trgm_ops"},
         ),
     )
 
