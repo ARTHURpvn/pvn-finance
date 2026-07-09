@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react'
-import { apiFetch, tokenStore } from './api'
+import { AUTH_EXPIRED_EVENT, apiFetch, tokenStore } from './api'
 import type { TokenResponse, User } from './types'
 
 interface AuthContextValue {
@@ -31,6 +31,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .then(setUser)
       .catch(() => tokenStore.clear())
       .finally(() => setLoading(false))
+  }, [])
+
+  // Sessão expirou de vez (refresh falhou em apiFetch): limpa e desloga, o que
+  // faz o ProtectedRoute redirecionar para o login.
+  useEffect(() => {
+    const onExpired = () => {
+      tokenStore.clear()
+      setUser(null)
+    }
+    window.addEventListener(AUTH_EXPIRED_EVENT, onExpired)
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, onExpired)
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
