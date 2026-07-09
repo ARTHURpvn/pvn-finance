@@ -19,6 +19,7 @@ from app.infrastructure.user_repository import SqlUserRepository
 from app.ports.financial_data_port import (
     AggregatorError,
     ProviderAccount,
+    ProviderInvestment,
     ProviderItem,
     ProviderTransaction,
     RetryableAggregatorError,
@@ -26,12 +27,15 @@ from app.ports.financial_data_port import (
 
 
 def _make_service(session: Session, adapter, *, base_delay: float = 0.0) -> SyncService:
+    from app.infrastructure.investment_repository import SqlInvestmentRepository
+
     return SyncService(
         adapter=adapter,
         connections=SqlConnectionRepository(session),
         accounts=SqlAccountRepository(session),
         transactions=SqlTransactionRepository(session),
         sync_logs=SqlSyncLogRepository(session),
+        investments=SqlInvestmentRepository(session),
         base_delay=base_delay,
     )
 
@@ -144,6 +148,60 @@ def test_sync_skips_when_consent_expired(db_session: Session) -> None:
     assert result.imported == 0
     conn = SqlConnectionRepository(db_session).get(conn_id, user_id)
     assert conn is not None and conn.status == ConnectionStatus.REQUER_REAUTH
+
+
+def test_sync_persists_investments_and_flags_transfer(db_session: Session) -> None:
+    """Sync grava investimentos (patrimônio) e marca aplicações como is_transfer
+    (neutras no fluxo do dashboard)."""
+    from app.infrastructure.dashboard_repository import SqlDashboardRepository
+    from app.infrastructure.investment_repository import SqlInvestmentRepository
+
+    user_id, conn_id = _seed_connection(db_session, email="inv@e.com")
+    account = ProviderAccount(
+        provider_account_id="acc-1", type="checking", name="C",
+        currency="BRL", balance=Decimal("100.00"),
+    )
+    txs = [
+        ProviderTransaction(
+            provider_transaction_id="salario", date=date(2026, 7, 1),
+            amount=Decimal("500.00"), description="Salário",
+        ),
+        ProviderTransaction(  # aplicação Rende Fácil → neutra no fluxo
+            provider_transaction_id="aplic", date=date(2026, 7, 2),
+            amount=Decimal("-300.00"), description="REND.FACIL",
+            provider_category="Automatic investment",
+        ),
+    ]
+    adapter = FakeFinancialDataAdapter(
+        accounts=[account],
+        transactions={"acc-1": txs},
+        investments=[
+            ProviderInvestment(
+                provider_investment_id="rf-1", name="BB Rende Fácil",
+                type="MUTUAL_FUND", balance=Decimal("1175.44"),
+            )
+        ],
+    )
+    service = _make_service(db_session, adapter)
+
+    service.sync(connection_id=conn_id, user_id=user_id)
+
+    # investimento persistido
+    invs = SqlInvestmentRepository(db_session).list_by_user(user_id)
+    assert len(invs) == 1 and invs[0].balance == Decimal("1175.44")
+
+    # a aplicação foi marcada como transferência
+    applied = (
+        db_session.query(TransactionModel)
+        .filter_by(provider_transaction_id="aplic")
+        .one()
+    )
+    assert applied.is_transfer is True
+
+    # dashboard: só o salário conta (aplicação excluída do fluxo)
+    summ = SqlDashboardRepository(db_session).summary(user_id, None, None)
+    assert summ.received == Decimal("500.00")
+    assert summ.spent == Decimal("0")  # a aplicação de -300 não conta como gasto
 
 
 def test_sync_marks_reauth_when_item_login_error(db_session: Session) -> None:

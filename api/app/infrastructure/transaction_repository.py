@@ -29,6 +29,7 @@ class SqlTransactionRepository:
             description=model.description,
             counterpart=model.counterpart,
             category_id=model.category_id,
+            is_transfer=model.is_transfer,
         )
 
     def search(
@@ -111,6 +112,7 @@ class SqlTransactionRepository:
                 "description": tx.description,
                 "counterpart": tx.counterpart,
                 "category_id": tx.category_id,
+                "is_transfer": tx.is_transfer,
                 "raw": raw,
             }
             for tx, raw in items

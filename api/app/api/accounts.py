@@ -7,7 +7,9 @@ from fastapi import APIRouter
 from app.api.deps import CurrentUser, SessionDep
 from app.api.schemas import AccountResponse, AccountsResponse, AccountSummary
 from app.domain.account import consolidated_balance
+from app.domain.investment import total_invested
 from app.infrastructure.account_repository import SqlAccountRepository
+from app.infrastructure.investment_repository import SqlInvestmentRepository
 
 router = APIRouter(prefix="/accounts", tags=["accounts"])
 
@@ -15,7 +17,10 @@ router = APIRouter(prefix="/accounts", tags=["accounts"])
 @router.get("", response_model=AccountsResponse)
 def list_accounts(current_user: CurrentUser, session: SessionDep) -> AccountsResponse:
     accounts = SqlAccountRepository(session).list_by_user(current_user.id)
-    balance = consolidated_balance(accounts)
+    investments = SqlInvestmentRepository(session).list_by_user(current_user.id)
+    balance = consolidated_balance(
+        accounts, investments_total=total_invested(investments)
+    )
     return AccountsResponse(
         accounts=[
             AccountResponse(
@@ -31,6 +36,8 @@ def list_accounts(current_user: CurrentUser, session: SessionDep) -> AccountsRes
         ],
         summary=AccountSummary(
             total=str(balance.total or Decimal("0")),
+            cash=str(balance.cash or Decimal("0")),
+            investments=str(balance.investments or Decimal("0")),
             credit_card=str(balance.credit_card or Decimal("0")),
         ),
     )

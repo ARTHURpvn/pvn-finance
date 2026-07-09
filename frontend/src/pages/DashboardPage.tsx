@@ -162,6 +162,12 @@ export function DashboardPage() {
           <div style={{ ...display, fontSize: 42, lineHeight: 1.05 }}>
             {money(accounts?.summary.total ?? '0')}
           </div>
+          {Number(accounts?.summary.investments ?? '0') > 0 && (
+            <div style={{ fontSize: 12.5, opacity: 0.8 }}>
+              Em conta: {money(accounts?.summary.cash ?? '0')} · investido:{' '}
+              {money(accounts?.summary.investments ?? '0')}
+            </div>
+          )}
           <div style={{ fontSize: 12.5, opacity: 0.8 }}>
             Cartão de crédito à parte: {money(accounts?.summary.credit_card ?? '0')}
           </div>

@@ -11,9 +11,10 @@ from uuid import UUID
 
 from app.domain.account import Account
 from app.domain.connection import Connection, ConnectionStatus
+from app.domain.investment import Investment
 from app.domain.rule import MatchType, Rule
 from app.domain.transaction import Transaction
-from app.ports.financial_data_port import ProviderAccount
+from app.ports.financial_data_port import ProviderAccount, ProviderInvestment
 
 
 class ConnectionRepository(Protocol):
@@ -46,6 +47,17 @@ class AccountRepository(Protocol):
         self, *, user_id: UUID, connection_id: UUID, provider_account: ProviderAccount
     ) -> Account: ...
     def list_by_user(self, user_id: UUID) -> list[Account]: ...
+
+
+class InvestmentRepository(Protocol):
+    def upsert(
+        self,
+        *,
+        user_id: UUID,
+        connection_id: UUID,
+        provider_investment: ProviderInvestment,
+    ) -> Investment: ...
+    def list_by_user(self, user_id: UUID) -> list[Investment]: ...
 
 
 class TransactionRepository(Protocol):

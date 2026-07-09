@@ -74,7 +74,9 @@ class AccountResponse(BaseModel):
 
 
 class AccountSummary(BaseModel):
-    total: str  # soma excluindo cartão de crédito (RN-02)
+    total: str  # patrimônio: contas de depósito + investimentos (RN-02)
+    cash: str  # só saldo em conta
+    investments: str  # soma dos investimentos (ex.: Rende Fácil, CDB)
     credit_card: str
 
 

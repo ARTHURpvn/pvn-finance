@@ -23,6 +23,7 @@ from app.ports.financial_data_port import (
 from app.ports.repositories import (
     AccountRepository,
     ConnectionRepository,
+    InvestmentRepository,
     SyncLogRepository,
     TransactionRepository,
 )
@@ -52,6 +53,7 @@ class SyncService:
         transactions: TransactionRepository,
         sync_logs: SyncLogRepository,
         categorization: CategorizationService | None = None,
+        investments: InvestmentRepository | None = None,
         base_delay: float = 0.5,
     ) -> None:
         self._adapter = adapter
@@ -60,6 +62,7 @@ class SyncService:
         self._transactions = transactions
         self._sync_logs = sync_logs
         self._categorization = categorization
+        self._investments = investments
         self._base_delay = base_delay
 
     def sync(self, *, connection_id: UUID, user_id: UUID) -> SyncResult:
@@ -130,6 +133,25 @@ class SyncService:
             item.status, consent_expires_at=item.consent_expires_at, now=now
         )
 
+    def _sync_investments(
+        self, *, connection_id: UUID, user_id: UUID, provider_item_id: str
+    ) -> None:
+        """Busca e persiste os investimentos da conexão (compõem o patrimônio)."""
+        if self._investments is None:
+            return
+        provider_investments = with_retry(
+            lambda: self._adapter.fetch_investments(
+                provider_item_id=provider_item_id
+            ),
+            base_delay=self._base_delay,
+        )
+        for provider_investment in provider_investments:
+            self._investments.upsert(
+                user_id=user_id,
+                connection_id=connection_id,
+                provider_investment=provider_investment,
+            )
+
     def _do_sync(
         self,
         *,
@@ -141,6 +163,11 @@ class SyncService:
         provider_accounts = with_retry(
             lambda: self._adapter.fetch_accounts(provider_item_id=provider_item_id),
             base_delay=self._base_delay,
+        )
+        self._sync_investments(
+            connection_id=connection_id,
+            user_id=user_id,
+            provider_item_id=provider_item_id,
         )
         categorizer = (
             self._categorization.build_for_user(user_id)

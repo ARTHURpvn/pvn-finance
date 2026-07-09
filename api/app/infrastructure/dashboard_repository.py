@@ -52,7 +52,12 @@ class SqlDashboardRepository:
         self, user_id: UUID, date_from: date_type | None, date_to: date_type | None
     ) -> Summary:
         conditions = self._date_filter(
-            [TransactionModel.user_id == user_id], date_from, date_to
+            [
+                TransactionModel.user_id == user_id,
+                TransactionModel.is_transfer.is_(False),
+            ],
+            date_from,
+            date_to,
         )
         stmt = (
             select(
@@ -78,6 +83,7 @@ class SqlDashboardRepository:
             [
                 TransactionModel.user_id == user_id,
                 TransactionModel.direction == Direction.OUT.value,
+                TransactionModel.is_transfer.is_(False),
             ],
             date_from,
             date_to,
@@ -104,7 +110,12 @@ class SqlDashboardRepository:
     ) -> list[TimelinePoint]:
         month = func.to_char(func.date_trunc("month", TransactionModel.date), "YYYY-MM")
         conditions = self._date_filter(
-            [TransactionModel.user_id == user_id], date_from, date_to
+            [
+                TransactionModel.user_id == user_id,
+                TransactionModel.is_transfer.is_(False),
+            ],
+            date_from,
+            date_to,
         )
         stmt = (
             select(

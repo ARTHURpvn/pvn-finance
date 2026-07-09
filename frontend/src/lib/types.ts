@@ -44,7 +44,7 @@ export interface Account {
 
 export interface AccountsResponse {
   accounts: Account[]
-  summary: { total: string; credit_card: string }
+  summary: { total: string; cash: string; investments: string; credit_card: string }
 }
 
 export interface Transaction {
