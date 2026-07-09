@@ -16,6 +16,7 @@ from app.api.schemas import (
     TransactionsPage,
 )
 from app.domain.rule import MatchType
+from app.infrastructure.account_repository import SqlAccountRepository
 from app.infrastructure.category_repository import SqlCategoryRepository
 from app.infrastructure.rule_repository import SqlRuleRepository
 from app.infrastructure.transaction_repository import SqlTransactionRepository
@@ -51,12 +52,17 @@ def list_transactions(
     categories = {
         c.id: c.name for c in SqlCategoryRepository(session).list_for_user(current_user.id)
     }
+    account_types = {
+        a.id: a.type.value
+        for a in SqlAccountRepository(session).list_by_user(current_user.id)
+    }
 
     return TransactionsPage(
         items=[
             TransactionResponse(
                 id=t.id,
                 account_id=t.account_id,
+                account_type=account_types.get(t.account_id),
                 date=t.date,
                 amount=str(t.amount),
                 direction=t.direction.value,

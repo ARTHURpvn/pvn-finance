@@ -59,3 +59,45 @@ def test_normalize_transaction_derives_direction() -> None:
     assert tx.direction == Direction.OUT
     assert tx.provider_transaction_id == "ptx-1"
     assert tx.amount == Decimal("-99.90")
+
+
+def test_credit_card_purchase_inverts_sign_to_expense() -> None:
+    # No cartão o Pluggy manda a compra positiva (aumenta a fatura); é gasto.
+    provider = ProviderTransaction(
+        provider_transaction_id="c1",
+        date=date(2026, 1, 5),
+        amount=Decimal("54.96"),
+        description="SUP MEDEIROS",
+    )
+
+    tx = normalize_transaction(
+        provider,
+        user_id=uuid4(),
+        account_id=uuid4(),
+        transaction_id=uuid4(),
+        is_credit_card=True,
+    )
+
+    assert tx.amount == Decimal("-54.96")
+    assert tx.direction == Direction.OUT  # vira gasto
+
+
+def test_credit_card_bill_reduction_is_neutral() -> None:
+    # Redução da fatura (pagamento/estorno vem negativo no cartão) não é receita.
+    provider = ProviderTransaction(
+        provider_transaction_id="p1",
+        date=date(2026, 1, 6),
+        amount=Decimal("-500.00"),
+        description="Pagamento recebido",
+    )
+
+    tx = normalize_transaction(
+        provider,
+        user_id=uuid4(),
+        account_id=uuid4(),
+        transaction_id=uuid4(),
+        is_credit_card=True,
+    )
+
+    assert tx.amount == Decimal("500.00")
+    assert tx.is_transfer is True  # neutro: não infla o Entrou

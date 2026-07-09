@@ -50,6 +50,7 @@ export interface AccountsResponse {
 export interface Transaction {
   id: string
   account_id: string
+  account_type: string | null
   date: string
   amount: string
   direction: 'in' | 'out'

@@ -26,10 +26,16 @@ INVESTMENT_CATEGORIES = frozenset(
 #: Transferência entre contas do mesmo titular. Ex.: PIX de uma conta sua para
 #: outra sua. Neutra no fluxo, mas continua visível no extrato.
 _SELF_TRANSFER_CATEGORIES = frozenset({"same person transfer"})
+#: Pagamento de fatura de cartão — quitação de dívida, não gasto novo (a compra
+#: já conta). Aparece nas DUAS pernas (débito na conta + crédito no cartão);
+#: tratar como neutra evita o gasto duplicado.
+_LIABILITY_PAYMENT_CATEGORIES = frozenset({"credit card payment"})
 
 #: Categorias que são movimentação do próprio dinheiro — não gasto nem receita,
 #: portanto neutras no fluxo (Entrou/Saiu).
-_FLOW_NEUTRAL_CATEGORIES = INVESTMENT_CATEGORIES | _SELF_TRANSFER_CATEGORIES
+_FLOW_NEUTRAL_CATEGORIES = (
+    INVESTMENT_CATEGORIES | _SELF_TRANSFER_CATEGORIES | _LIABILITY_PAYMENT_CATEGORIES
+)
 
 
 def is_flow_neutral(provider_category: str | None) -> bool:
