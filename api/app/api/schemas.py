@@ -89,6 +89,7 @@ class TransactionResponse(BaseModel):
     id: UUID
     account_id: UUID
     account_type: str | None = None  # ex.: credit_card (para destaque no extrato)
+    account_name: str | None = None  # nome da conta (para exibir a logo do banco)
     date: date
     amount: str
     direction: str

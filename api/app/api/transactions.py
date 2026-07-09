@@ -52,10 +52,9 @@ def list_transactions(
     categories = {
         c.id: c.name for c in SqlCategoryRepository(session).list_for_user(current_user.id)
     }
-    account_types = {
-        a.id: a.type.value
-        for a in SqlAccountRepository(session).list_by_user(current_user.id)
-    }
+    accounts = SqlAccountRepository(session).list_by_user(current_user.id)
+    account_types = {a.id: a.type.value for a in accounts}
+    account_names = {a.id: a.name for a in accounts}
 
     return TransactionsPage(
         items=[
@@ -63,6 +62,7 @@ def list_transactions(
                 id=t.id,
                 account_id=t.account_id,
                 account_type=account_types.get(t.account_id),
+                account_name=account_names.get(t.account_id),
                 date=t.date,
                 amount=str(t.amount),
                 direction=t.direction.value,

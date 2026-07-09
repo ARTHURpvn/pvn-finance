@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Card } from '@/components/Card'
 import { TransactionDetailModal } from '@/components/TransactionDetailModal'
-import { IconArrowIn, IconArrowOut, IconSearch } from '@/components/icons'
+import { TransactionRow } from '@/components/TransactionRow'
+import { IconSearch } from '@/components/icons'
 import { apiFetch } from '@/lib/api'
 import { formatDate } from '@/lib/format'
 import { display } from '@/lib/styles'
@@ -105,100 +106,14 @@ export function ExtratoPage() {
                   </b>
                 </span>
               </div>
-              {items.map((t, idx) => {
-                const income = t.direction === 'in'
-                const isCard = t.account_type === 'credit_card'
-                // Cartão de crédito (gasto) em laranja; entrada verde; saída débito vermelho.
-                const tone =
-                  isCard && !income
-                    ? 'var(--gold)'
-                    : income
-                      ? 'var(--ok)'
-                      : 'var(--danger)'
-                return (
-                  <div
-                    key={t.id}
-                    onClick={() => setSelected(t)}
-                    className="u-row"
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 14,
-                      padding: '14px 18px',
-                      borderTop: idx === 0 ? 'none' : '1px solid var(--line)',
-                      cursor: 'pointer',
-                    }}
-                  >
-                    <span
-                      style={{
-                        width: 40,
-                        height: 40,
-                        borderRadius: 12,
-                        background: `color-mix(in srgb, ${tone} 14%, transparent)`,
-                        color: tone,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0,
-                      }}
-                    >
-                      {income ? <IconArrowIn size={18} /> : <IconArrowOut size={18} />}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontSize: 14,
-                          fontWeight: 600,
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {t.description}
-                      </div>
-                      <div style={{ marginTop: 3, display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                        <span
-                          style={{
-                            fontSize: 11.5,
-                            color: 'var(--ink-soft)',
-                            background: 'var(--fill)',
-                            padding: '2px 8px',
-                            borderRadius: 20,
-                            fontWeight: 600,
-                          }}
-                        >
-                          {t.category_name ?? 'Sem categoria'}
-                        </span>
-                        {isCard && (
-                          <span
-                            style={{
-                              fontSize: 11.5,
-                              color: 'var(--gold)',
-                              background: 'color-mix(in srgb, var(--gold) 15%, transparent)',
-                              padding: '2px 8px',
-                              borderRadius: 20,
-                              fontWeight: 700,
-                            }}
-                          >
-                            cartão
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span
-                      style={{
-                        ...display,
-                        fontWeight: 700,
-                        fontSize: 15,
-                        whiteSpace: 'nowrap',
-                        color: tone,
-                      }}
-                    >
-                      {money(t.amount)}
-                    </span>
-                  </div>
-                )
-              })}
+              {items.map((t, idx) => (
+                <TransactionRow
+                  key={t.id}
+                  tx={t}
+                  onClick={() => setSelected(t)}
+                  borderTop={idx > 0}
+                />
+              ))}
             </Card>
           )
         })
