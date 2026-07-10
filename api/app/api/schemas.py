@@ -172,3 +172,19 @@ class TimelinePointResponse(BaseModel):
     month: str
     inflow: str = Field(serialization_alias="in")
     outflow: str = Field(serialization_alias="out")
+
+
+class SubscriptionResponse(BaseModel):
+    name: str
+    slug: str  # asset da logo no frontend (vazio = usa avatar/monograma)
+    color: str
+    monthly_amount: str
+    occurrences: int
+    months: int
+    last_date: date
+    category: str | None
+
+
+class SubscriptionsResponse(BaseModel):
+    subscriptions: list[SubscriptionResponse]
+    monthly_total: str

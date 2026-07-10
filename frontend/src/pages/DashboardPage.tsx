@@ -2,13 +2,19 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Card } from '@/components/Card'
+import { SubscriptionsCard } from '@/components/SubscriptionsCard'
 import { TransactionRow } from '@/components/TransactionRow'
 import { IconArrowIn, IconArrowOut } from '@/components/icons'
 import { display } from '@/lib/styles'
 import { apiFetch } from '@/lib/api'
 import { bankOf } from '@/lib/banks'
 import { useUi } from '@/lib/ui'
-import type { AccountsResponse, DashboardSummary, TransactionsPage } from '@/lib/types'
+import type {
+  AccountsResponse,
+  DashboardSummary,
+  SubscriptionsResponse,
+  TransactionsPage,
+} from '@/lib/types'
 
 interface CategorySpend {
   category: string
@@ -88,6 +94,7 @@ export function DashboardPage() {
   const [timeline, setTimeline] = useState<TimelinePoint[]>([])
   const [recent, setRecent] = useState<TransactionsPage | null>(null)
   const [netByAccount, setNetByAccount] = useState<Record<string, string>>({})
+  const [subs, setSubs] = useState<SubscriptionsResponse | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -113,14 +120,16 @@ export function DashboardPage() {
       apiFetch<{ account_id: string; net: string }[]>(
         `/dashboard/by-account?from=${monthStart}&to=${monthEnd}`,
       ),
+      apiFetch<SubscriptionsResponse>('/subscriptions'),
     ])
-      .then(([a, s, c, t, r, n]) => {
+      .then(([a, s, c, t, r, n, sub]) => {
         setAccounts(a)
         setSummary(s)
         setByCategory(c)
         setTimeline(t)
         setRecent(r)
         setNetByAccount(Object.fromEntries(n.map((x) => [x.account_id, x.net])))
+        setSubs(sub)
       })
       .catch(() => toast.error('Falha ao carregar o painel'))
       .finally(() => setLoading(false))
@@ -398,6 +407,13 @@ export function DashboardPage() {
           )}
         </Card>
       </div>
+
+      {subs && (
+        <SubscriptionsCard
+          subscriptions={subs.subscriptions}
+          monthlyTotal={subs.monthly_total}
+        />
+      )}
 
       <Card>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>

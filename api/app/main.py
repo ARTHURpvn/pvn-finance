@@ -17,6 +17,7 @@ from app.api.errors import error_body
 from app.api.health import router as health_router
 from app.api.me import router as me_router
 from app.api.rules import router as rules_router
+from app.api.subscriptions import router as subscriptions_router
 from app.api.transactions import router as transactions_router
 from app.api.webhooks import router as webhooks_router
 from app.config import get_settings
@@ -87,6 +88,7 @@ def create_app() -> FastAPI:
     app.include_router(categories_router)
     app.include_router(rules_router)
     app.include_router(dashboard_router)
+    app.include_router(subscriptions_router)
     app.include_router(webhooks_router)
     return app
 
