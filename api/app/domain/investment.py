@@ -22,19 +22,15 @@ class Investment:
     subtype: str | None = None
 
 
-#: Palavras/subtipos que indicam reserva de resgate imediato (dinheiro
-#: disponível a qualquer hora). Conta como SALDO, não como investimento de prazo.
-_RESERVE_KEYWORDS = ("rende f", "reserva", "poupan")
-
-
 def is_liquid_reserve(investment: Investment) -> bool:
-    """True se o investimento é uma reserva de liquidez imediata (BB Rende
-    Fácil, poupança) — tratada como saldo do banco, não como investimento de
-    prazo (CDB, fundo, ação)."""
-    name = investment.name.lower()
-    if (investment.subtype or "").upper() == "SAVINGS":
-        return True
-    return any(k in name for k in _RESERVE_KEYWORDS)
+    """True se o investimento é uma reserva de liquidez imediata que conta como
+    SALDO do banco — hoje, só poupança de verdade (``subtype == SAVINGS``).
+
+    A "caixinha" BB Rende Fácil, apesar do nome "Reserva", é FUNDO DE
+    INVESTIMENTO (``subtype == INVESTMENT_FUND``): é investimento, não saldo
+    (decisão do usuário 2026-07-10). Por isso NÃO casamos mais pelo nome
+    ("reserva"/"rende fácil"), só pelo subtype de poupança."""
+    return (investment.subtype or "").upper() == "SAVINGS"
 
 
 def total_reserves(investments: Iterable[Investment]) -> Decimal:
