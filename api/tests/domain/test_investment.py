@@ -28,7 +28,11 @@ def _account(type_: AccountType, balance: str) -> Account:
     )
 
 
-def _investment(balance: str, name: str = "CDB - NU FINANCEIRA") -> Investment:
+def _investment(
+    balance: str,
+    name: str = "CDB - NU FINANCEIRA",
+    subtype: str | None = None,
+) -> Investment:
     return Investment(
         id=uuid4(),
         user_id=uuid4(),
@@ -37,19 +41,25 @@ def _investment(balance: str, name: str = "CDB - NU FINANCEIRA") -> Investment:
         name=name,
         type="FIXED_INCOME",
         balance=Decimal(balance),
+        subtype=subtype,
     )
 
 
 def test_is_liquid_reserve() -> None:
-    assert is_liquid_reserve(_investment("1", "BB Renda Fixa Simples Reserva"))
-    assert is_liquid_reserve(_investment("1", "BB Rende Fácil"))
+    # Só poupança de verdade (subtype SAVINGS) é reserva/saldo.
+    assert is_liquid_reserve(_investment("1", "Poupança", subtype="SAVINGS"))
+    # A caixinha Rende Fácil é fundo de investimento → NÃO é reserva.
+    assert not is_liquid_reserve(
+        _investment("1", "BB Renda Fixa Simples Reserva", subtype="INVESTMENT_FUND")
+    )
+    assert not is_liquid_reserve(_investment("1", "BB Rende Fácil"))
     assert not is_liquid_reserve(_investment("1", "CDB - NU FINANCEIRA"))
 
 
 def test_total_invested_excludes_reserves() -> None:
     invs = [
         _investment("100.00", "CDB - NU FINANCEIRA"),  # prazo
-        _investment("50.50", "BB Rende Fácil Reserva"),  # reserva (não conta)
+        _investment("50.50", "Poupança", subtype="SAVINGS"),  # reserva (não conta)
     ]
     assert total_invested(invs) == Decimal("100.00")
     assert total_reserves(invs) == Decimal("50.50")
