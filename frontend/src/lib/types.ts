@@ -95,3 +95,19 @@ export interface DashboardSummary {
   spent: string
   net: string
 }
+
+export interface Subscription {
+  name: string
+  slug: string
+  color: string
+  monthly_amount: string
+  occurrences: number
+  months: number
+  last_date: string
+  category: string | null
+}
+
+export interface SubscriptionsResponse {
+  subscriptions: Subscription[]
+  monthly_total: string
+}
