@@ -76,6 +76,31 @@ O frontend aponta para `VITE_API_URL` (default `http://localhost:8000`). Configu
 
 ---
 
+## Deploy (produção / VPS)
+
+Um comando sobe a stack inteira (Postgres + API + worker + frontend) numa VPS com Docker:
+
+```bash
+./deploy.sh
+```
+
+O script (`deploy.sh` + `docker-compose.prod.yml`):
+- cria o `.env` a partir do `.env.example` na primeira execução;
+- **gera segredos fortes** (`JWT_SECRET`, `VAULT_KEY` Fernet, `POSTGRES_PASSWORD`) se ainda forem os placeholders — e não os regenera depois;
+- faz build e sobe tudo; as **migrations rodam no boot** da API;
+- espera a API ficar saudável e mostra o status.
+
+**HTTPS automático:** defina `DOMAIN=seu.dominio.com` no `.env` (DNS apontando para o servidor, portas 80/443 abertas) e rode de novo — o [Caddy](https://caddyserver.com) emite e renova o certificado sozinho. Sem `DOMAIN`, serve em HTTP na porta 80.
+
+**Arquitetura de produção:** só o serviço `web` (Caddy) fica exposto — ele serve o SPA e faz proxy de `/api/*` para a API (mesma origem, sem CORS). Postgres e API ficam na rede interna do compose. O `VITE_API_URL` é embutido como `/api` no build.
+
+```bash
+docker compose -f docker-compose.prod.yml logs -f   # logs
+docker compose -f docker-compose.prod.yml down       # derrubar
+```
+
+---
+
 ## Testes e CI
 
 O pipeline roda em **todo push na `main` e em todo pull request** (`.github/workflows/ci.yml`), em **dois jobs paralelos**:
