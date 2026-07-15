@@ -111,3 +111,38 @@ export interface SubscriptionsResponse {
   subscriptions: Subscription[]
   monthly_total: string
 }
+
+export interface InvestmentDetail {
+  name: string
+  type: string
+  subtype: string | null
+  bank: string | null
+  balance: string
+  amount_original: string | null
+  profit: string | null
+  is_fixed_income: boolean
+  rate: string | null
+  rate_type: string | null
+  annual_rate: string | null
+  monthly_income: string
+  due_date: string | null
+  purchase_date: string | null
+}
+
+export interface InvestmentEvolutionPoint {
+  month: string
+  total: string
+}
+
+export interface InvestmentsSummary {
+  total_invested: string
+  total_profit: string
+  monthly_income: string
+  cdi_annual_rate: string
+}
+
+export interface InvestmentsResponse {
+  investments: InvestmentDetail[]
+  summary: InvestmentsSummary
+  evolution: InvestmentEvolutionPoint[]
+}

@@ -15,6 +15,7 @@ from app.api.connections import router as connections_router
 from app.api.dashboard import router as dashboard_router
 from app.api.errors import error_body
 from app.api.health import router as health_router
+from app.api.investments import router as investments_router
 from app.api.me import router as me_router
 from app.api.rules import router as rules_router
 from app.api.subscriptions import router as subscriptions_router
@@ -88,6 +89,7 @@ def create_app() -> FastAPI:
     app.include_router(categories_router)
     app.include_router(rules_router)
     app.include_router(dashboard_router)
+    app.include_router(investments_router)
     app.include_router(subscriptions_router)
     app.include_router(webhooks_router)
     return app

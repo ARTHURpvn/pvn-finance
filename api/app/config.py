@@ -1,5 +1,6 @@
 """Configuração 12-factor via variáveis de ambiente (NFR-010)."""
 
+from decimal import Decimal
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -58,6 +59,10 @@ class Settings(BaseSettings):
     # Worker de sync agendado (F9)
     sync_interval_minutes: int = 60  # intervalo entre varreduras
     sync_stale_minutes: int = 60  # conexão é "devida" se sync mais antigo que isso
+
+    # CDI anual (%) usado para estimar a renda fixa mensal de posições atreladas
+    # ao CDI (ex.: CDB a 115% do CDI). Ajuste conforme o CDI vigente.
+    cdi_annual_rate: Decimal = Decimal("10.75")
 
     # Rate limiting de /auth/* (F10) — in-memory; usar Redis ao escalar.
     auth_rate_limit_max: int = 20

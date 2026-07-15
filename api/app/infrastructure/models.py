@@ -259,6 +259,21 @@ class InvestmentModel(Base):
     subtype: Mapped[str | None] = mapped_column(String(50), nullable=True)
     balance: Mapped[Decimal] = mapped_column(Numeric(18, 2), nullable=False)
     currency: Mapped[str] = mapped_column(String(10), nullable=False)
+    # Detalhe (0011): aplicado vs. atual, taxa, vencimento, instituição.
+    amount_original: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    amount_profit: Mapped[Decimal | None] = mapped_column(Numeric(18, 2), nullable=True)
+    value: Mapped[Decimal | None] = mapped_column(Numeric(18, 6), nullable=True)
+    quantity: Mapped[Decimal | None] = mapped_column(Numeric(18, 6), nullable=True)
+    rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 4), nullable=True)
+    rate_type: Mapped[str | None] = mapped_column(String(30), nullable=True)
+    annual_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 4), nullable=True)
+    last_month_rate: Mapped[Decimal | None] = mapped_column(Numeric(10, 4), nullable=True)
+    last_twelve_months_rate: Mapped[Decimal | None] = mapped_column(
+        Numeric(10, 4), nullable=True
+    )
+    due_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
+    purchase_date: Mapped[date_type | None] = mapped_column(Date, nullable=True)
+    institution: Mapped[str | None] = mapped_column(String(255), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
