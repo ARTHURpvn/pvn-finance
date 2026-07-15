@@ -1,13 +1,12 @@
-# Server block para o nginx do HOST (VPS).
-# O deploy.sh gera uma versão preenchida (nginx-host.conf) com o seu DOMAIN.
+# Template do server block para o nginx do HOST (VPS).
+# O deploy.sh gera uma versão preenchida em deploy/sites/<seu-dominio> —
+# o arquivo tem o NOME DO DOMÍNIO (padrão p/ gerenciar vários domínios).
 #
-# Instalação:
-#   sudo cp nginx-host.conf /etc/nginx/sites-available/consolida
-#   sudo ln -s /etc/nginx/sites-available/consolida /etc/nginx/sites-enabled/
+# Instalação (troque SEU_DOMINIO pelo seu domínio; o deploy.sh imprime pronto):
+#   sudo cp deploy/sites/SEU_DOMINIO /etc/nginx/sites-available/SEU_DOMINIO
+#   sudo ln -s /etc/nginx/sites-available/SEU_DOMINIO /etc/nginx/sites-enabled/
 #   sudo nginx -t && sudo systemctl reload nginx
 #   sudo certbot --nginx -d SEU_DOMINIO      # emite o TLS e ajusta este bloco
-#
-# Troque SEU_DOMINIO e, se mudou a porta, WEB_PORT (padrão 8080).
 
 server {
     listen 80;

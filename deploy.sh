@@ -123,10 +123,12 @@ info "Subindo a stack (build + up)… isso pode levar alguns minutos na 1ª vez.
 # 6. Server block do nginx do host
 # ---------------------------------------------------------------------------
 if [ -n "$DOMAIN" ] && [ -f "deploy/nginx-host.conf.example" ]; then
+  mkdir -p deploy/sites
+  # O arquivo gerado tem o NOME DO DOMÍNIO (padrão para gerenciar vários).
   sed -e "s/SEU_DOMINIO/${DOMAIN}/g" \
       -e "s#127.0.0.1:8080#127.0.0.1:${WEB_PORT}#g" \
-      deploy/nginx-host.conf.example > nginx-host.conf
-  ok "Gerei o nginx-host.conf para ${DOMAIN} (porta ${WEB_PORT})."
+      deploy/nginx-host.conf.example > "deploy/sites/${DOMAIN}"
+  ok "Gerei deploy/sites/${DOMAIN} (server block do host, porta ${WEB_PORT})."
 fi
 
 # ---------------------------------------------------------------------------
@@ -155,8 +157,8 @@ echo
 printf '%sPróximo passo — nginx do host:%s\n' "$c_bold" "$c_off"
 if [ -n "$DOMAIN" ]; then
   cat <<EOF
-  sudo cp nginx-host.conf /etc/nginx/sites-available/consolida
-  sudo ln -sf /etc/nginx/sites-available/consolida /etc/nginx/sites-enabled/
+  sudo cp deploy/sites/${DOMAIN} /etc/nginx/sites-available/${DOMAIN}
+  sudo ln -sf /etc/nginx/sites-available/${DOMAIN} /etc/nginx/sites-enabled/
   sudo nginx -t && sudo systemctl reload nginx
   sudo certbot --nginx -d ${DOMAIN}      # emite o TLS
 EOF
