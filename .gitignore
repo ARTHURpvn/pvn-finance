@@ -30,5 +30,5 @@ dist-ssr/
 # Logs
 *.log
 
-# gerado pelo deploy.sh (contém o domínio)
-nginx-host.conf
+# server blocks gerados pelo deploy.sh (nomeados pelo domínio)
+deploy/sites/

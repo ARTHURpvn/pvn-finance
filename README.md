@@ -92,11 +92,11 @@ O script (`deploy.sh` + `docker-compose.prod.yml`):
 
 **Arquitetura de produção:** feita para ficar **atrás do nginx do host** (que já ocupa a 80/443 e faz o TLS via certbot). O serviço `web` é um **nginx** que serve o SPA e faz proxy de `/api/*` → API (mesma origem, sem CORS), publicado apenas em `127.0.0.1:8080`. Postgres e API ficam na rede interna do compose. O `VITE_API_URL` é embutido como `/api` no build.
 
-**nginx do host:** defina `DOMAIN=seu.dominio.com` no `.env` e rode `./deploy.sh` — ele gera o `nginx-host.conf` (a partir de [`deploy/nginx-host.conf.example`](deploy/nginx-host.conf.example)). Depois:
+**nginx do host:** defina `DOMAIN=seu.dominio.com` no `.env` e rode `./deploy.sh` — ele gera o server block em `deploy/sites/seu.dominio.com` (o arquivo tem o **nome do domínio**, a partir de [`deploy/nginx-host.conf.example`](deploy/nginx-host.conf.example)). Depois:
 
 ```bash
-sudo cp nginx-host.conf /etc/nginx/sites-available/consolida
-sudo ln -sf /etc/nginx/sites-available/consolida /etc/nginx/sites-enabled/
+sudo cp deploy/sites/seu.dominio.com /etc/nginx/sites-available/seu.dominio.com
+sudo ln -sf /etc/nginx/sites-available/seu.dominio.com /etc/nginx/sites-enabled/
 sudo nginx -t && sudo systemctl reload nginx
 sudo certbot --nginx -d seu.dominio.com   # emite o TLS
 ```
