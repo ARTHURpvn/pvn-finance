@@ -218,8 +218,9 @@ class InvestmentEvolutionPoint(BaseModel):
 class InvestmentsSummary(BaseModel):
     total_invested: str
     total_profit: str
-    monthly_income: str  # renda fixa mensal estimada (R$)
+    monthly_income: str  # renda mensal estimada (R$) dos FIIs/ações
     cdi_annual_rate: str
+    fii_monthly_yield: str  # dividend yield mensal (%) usado na estimativa
 
 
 class InvestmentsResponse(BaseModel):

@@ -64,7 +64,9 @@ def _bank_of(
 def list_investments(
     current_user: CurrentUser, session: SessionDep
 ) -> InvestmentsResponse:
-    cdi = get_settings().cdi_annual_rate
+    settings = get_settings()
+    cdi = settings.cdi_annual_rate
+    fii_yield = settings.fii_monthly_yield
     invs = [
         i
         for i in SqlInvestmentRepository(session).list_by_user(current_user.id)
@@ -95,7 +97,7 @@ def list_investments(
             rate=_s(i.rate),
             rate_type=i.rate_type,
             annual_rate=_s(effective_annual_rate(i, cdi)),
-            monthly_income=str(monthly_income(i, cdi)),
+            monthly_income=str(monthly_income(i, fii_yield)),
             due_date=i.due_date,
             purchase_date=i.purchase_date,
         )
@@ -105,8 +107,9 @@ def list_investments(
     summary = InvestmentsSummary(
         total_invested=str(sum((i.balance for i in invs), Decimal("0"))),
         total_profit=str(total_profit(invs)),
-        monthly_income=str(total_monthly_income(invs, cdi)),
+        monthly_income=str(total_monthly_income(invs, fii_yield)),
         cdi_annual_rate=str(cdi),
+        fii_monthly_yield=str(fii_yield),
     )
 
     evolution = [

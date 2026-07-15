@@ -148,16 +148,21 @@ def test_effective_annual_rate_prefers_annual_rate() -> None:
     assert effective_annual_rate(inv, _CDI) == Decimal("9")
 
 
-def test_monthly_income_fixed_income() -> None:
-    # 1000 × 12% a.a. / 12 = 10/mês
-    inv = _fixed("1000", annual_rate="12")
-    assert monthly_income(inv, _CDI) == Decimal("10")
+_FII_YIELD = Decimal("0.7")  # yield mensal de FII (%) de teste
 
 
-def test_monthly_income_zero_when_not_fixed_income() -> None:
-    inv = _fixed("1000", annual_rate="12", type_="EQUITY")
-    assert not is_fixed_income(inv)
-    assert monthly_income(inv, _CDI) == Decimal("0")
+def test_monthly_income_from_variable_income() -> None:
+    # FII/ação paga mensal: 1000 × 0,7% = 7/mês
+    fii = _fixed("1000", type_="EQUITY")
+    assert is_fixed_income(fii) is False
+    assert monthly_income(fii, _FII_YIELD) == Decimal("7.00")
+
+
+def test_monthly_income_zero_for_fixed_income() -> None:
+    # CDB não paga mensal (vence no prazo) → não conta na renda mensal.
+    cdb = _fixed("1000", annual_rate="12")
+    assert is_fixed_income(cdb)
+    assert monthly_income(cdb, _FII_YIELD) == Decimal("0")
 
 
 def test_profit_from_original_and_total() -> None:
@@ -168,10 +173,10 @@ def test_profit_from_original_and_total() -> None:
     assert total_profit([a, b]) == Decimal("80")
 
 
-def test_total_monthly_income_sums_fixed_income() -> None:
-    a = _fixed("1000", annual_rate="12")  # 10/mês
-    b = _fixed("2000", annual_rate="6")   # 10/mês
-    assert total_monthly_income([a, b], _CDI) == Decimal("20")
+def test_total_monthly_income_sums_only_variable_income() -> None:
+    fii = _fixed("1000", type_="EQUITY")   # 7/mês
+    cdb = _fixed("2000", annual_rate="6")  # 0 (não paga mensal)
+    assert total_monthly_income([fii, cdb], _FII_YIELD) == Decimal("7.00")
 
 
 def test_monthly_evolution_interpolates_and_labels_months() -> None:

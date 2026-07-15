@@ -139,6 +139,7 @@ export interface InvestmentsSummary {
   total_profit: string
   monthly_income: string
   cdi_annual_rate: string
+  fii_monthly_yield: string
 }
 
 export interface InvestmentsResponse {

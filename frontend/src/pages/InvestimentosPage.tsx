@@ -1,32 +1,13 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { Card } from '@/components/Card'
+import { EvolutionChart } from '@/components/EvolutionChart'
 import { IconArrowIn, IconArrowOut } from '@/components/icons'
 import { apiFetch } from '@/lib/api'
 import { bankOf } from '@/lib/banks'
 import { display } from '@/lib/styles'
 import { useUi } from '@/lib/ui'
 import type { InvestmentDetail, InvestmentsResponse } from '@/lib/types'
-
-// ---- helpers de gráfico (linha + área), iguais aos do Dashboard ----
-function linePoints(values: number[], w = 460, h = 150, pad = 12): string {
-  if (values.length === 0) return ''
-  const max = Math.max(...values)
-  const min = Math.min(...values, 0)
-  const span = max - min || 1
-  const step = values.length > 1 ? w / (values.length - 1) : 0
-  return values
-    .map((v, i) => {
-      const x = i * step
-      const y = h - pad - ((v - min) / span) * (h - pad * 2)
-      return `${x.toFixed(0)},${y.toFixed(0)}`
-    })
-    .join(' ')
-}
-function areaPoints(values: number[]): string {
-  const pts = linePoints(values)
-  return pts ? `0,150 ${pts} 460,150` : ''
-}
 
 const TYPE_LABEL: Record<string, string> = {
   FIXED_INCOME: 'Renda fixa',
@@ -41,6 +22,10 @@ const MES_CURTO = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set'
 function monthLabel(ym: string): string {
   const [, m] = ym.split('-')
   return MES_CURTO[Number(m) - 1] ?? ym
+}
+function fullMonthLabel(ym: string): string {
+  const [y, m] = ym.split('-')
+  return `${MES_CURTO[Number(m) - 1] ?? ym}/${y}`
 }
 
 /** Avatar do banco: logo se houver, senão monograma com a inicial. */
@@ -107,7 +92,10 @@ export function InvestimentosPage() {
 
   const { summary, investments, evolution } = data
   const profit = Number(summary.total_profit)
-  const evoValues = evolution.map((p) => Number(p.total))
+  const evoPoints = evolution.map((p) => ({
+    label: fullMonthLabel(p.month),
+    value: Number(p.total),
+  }))
 
   // Agrupamento por banco.
   const banks = (() => {
@@ -167,9 +155,9 @@ export function InvestimentosPage() {
         <Card className="u-card-hover" style={{ flex: '1 1 190px', display: 'flex', flexDirection: 'column', gap: 12, justifyContent: 'center' }}>
           <span style={chip('var(--gold)')}>%</span>
           <div>
-            <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>Renda fixa / mês</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600 }}>Renda mensal (est.)</div>
             <div style={{ ...display, fontSize: 26, color: 'var(--gold)' }}>{money(summary.monthly_income)}</div>
-            <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>estimativa · CDI {summary.cdi_annual_rate}%</div>
+            <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>FIIs/ações · ~{summary.fii_monthly_yield}%/mês</div>
           </div>
         </Card>
       </div>
@@ -179,24 +167,9 @@ export function InvestimentosPage() {
         <Card className="u-card-hover" style={{ flex: '1.6 1 340px', display: 'flex', flexDirection: 'column', height: 264 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
             <span style={{ fontWeight: 700, fontSize: 16 }}>Evolução do investido</span>
-            <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>estimativa mês a mês</span>
+            <span style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>estimativa · passe o mouse</span>
           </div>
-          {evoValues.length > 1 ? (
-            <svg className="u-chartwrap" viewBox="0 0 460 150" preserveAspectRatio="none" style={{ width: '100%', flex: 1, marginTop: 8 }}>
-              <defs>
-                <linearGradient id="evoArea" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <polygon fill="url(#evoArea)" points={areaPoints(evoValues)} />
-              <polyline fill="none" stroke="var(--accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={linePoints(evoValues)} />
-            </svg>
-          ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-soft)', fontSize: 13 }}>
-              Sem histórico suficiente ainda
-            </div>
-          )}
+          <EvolutionChart points={evoPoints} formatValue={money} gradientId="evoInvest" />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-soft)' }}>
             {evolution.map((p) => <span key={p.month}>{monthLabel(p.month)}</span>)}
           </div>
@@ -266,6 +239,11 @@ function PositionRow({
       </div>
       <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
         <div style={{ fontWeight: 700, fontSize: 14 }}>{money(p.balance)}</div>
+        {Number(p.monthly_income) > 0 && (
+          <div style={{ fontSize: 11.5, fontWeight: 600, color: 'var(--gold)' }}>
+            ~{money(p.monthly_income)}/mês
+          </div>
+        )}
         {p.amount_original != null && (
           <div style={{ fontSize: 11.5, color: 'var(--ink-soft)' }}>
             aplicou {money(p.amount_original)}

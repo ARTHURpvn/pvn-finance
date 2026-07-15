@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { Card } from '@/components/Card'
+import { EvolutionChart } from '@/components/EvolutionChart'
 import { SubscriptionsCard } from '@/components/SubscriptionsCard'
 import { TransactionRow } from '@/components/TransactionRow'
 import { IconArrowIn, IconArrowOut } from '@/components/icons'
@@ -50,27 +51,6 @@ function donutGradient(values: number[]): string {
     return `${PALETTE[i % PALETTE.length]} ${start}% ${end}%`
   })
   return `conic-gradient(${stops.join(',')})`
-}
-
-function linePoints(values: number[], w = 460, h = 150, pad = 12): string {
-  if (values.length === 0) return ''
-  const max = Math.max(...values, 1)
-  const min = Math.min(...values, 0)
-  const span = max - min || 1
-  const step = values.length > 1 ? w / (values.length - 1) : 0
-  return values
-    .map((v, i) => {
-      const x = i * step
-      const y = h - pad - ((v - min) / span) * (h - pad * 2)
-      return `${x.toFixed(0)},${y.toFixed(0)}`
-    })
-    .join(' ')
-}
-
-function areaPoints(values: number[]): string {
-  const pts = linePoints(values)
-  if (!pts) return ''
-  return `0,150 ${pts} 460,150`
 }
 
 function chip(color: string): React.CSSProperties {
@@ -304,47 +284,11 @@ export function DashboardPage() {
               {timeline.length} {timeline.length === 1 ? 'mês' : 'meses'}
             </span>
           </div>
-          {inflow.length > 0 ? (
-            <svg className="u-chartwrap" viewBox="0 0 460 150" preserveAspectRatio="none" style={{ width: '100%', flex: 1, marginTop: 8 }}>
-              <defs>
-                <linearGradient id="area" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-              <line x1="0" y1="130" x2="460" y2="130" stroke="var(--line)" strokeWidth="1" />
-              <polygon fill="url(#area)" points={areaPoints(inflow)} />
-              <polyline
-                fill="none"
-                stroke="var(--accent)"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={linePoints(inflow)}
-              />
-              {linePoints(inflow)
-                .split(' ')
-                .map((pt) => {
-                  const [x, y] = pt.split(',')
-                  return (
-                    <circle
-                      key={pt}
-                      className="u-chart-dot"
-                      cx={x}
-                      cy={y}
-                      r={4}
-                      fill="var(--accent)"
-                      stroke="var(--panel)"
-                      strokeWidth="2"
-                    />
-                  )
-                })}
-            </svg>
-          ) : (
-            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--ink-soft)', fontSize: 13 }}>
-              Sem dados ainda
-            </div>
-          )}
+          <EvolutionChart
+            points={timeline.map((p, i) => ({ label: `${p.month.slice(5)}/${p.month.slice(0, 4)}`, value: inflow[i] }))}
+            formatValue={money}
+            gradientId="evoLiquido"
+          />
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--ink-soft)' }}>
             {timeline.map((p) => (
               <span key={p.month}>{p.month.slice(5)}</span>

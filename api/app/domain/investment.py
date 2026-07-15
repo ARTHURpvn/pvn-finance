@@ -7,7 +7,6 @@ from decimal import Decimal
 from uuid import UUID
 
 _ZERO = Decimal("0")
-_TWELVE = Decimal("12")
 _HUNDRED = Decimal("100")
 
 
@@ -82,22 +81,28 @@ def effective_annual_rate(
     return None
 
 
-def monthly_income(investment: Investment, cdi_annual_pct: Decimal) -> Decimal:
-    """Renda mensal estimada (R$) da posição: saldo × taxa anual efetiva ÷ 12.
-    Zero quando não é renda fixa ou não dá para estimar a taxa."""
-    if not is_fixed_income(investment):
+def is_variable_income(investment: Investment) -> bool:
+    """Renda variável que paga mensalmente (FIIs, ações): é o que retorna
+    dinheiro no bolso todo mês (dividendos/proventos)."""
+    return investment.type.upper() in ("EQUITY", "ETF") or (
+        investment.subtype or ""
+    ).upper() == "REAL_ESTATE_FUND"
+
+
+def monthly_income(investment: Investment, fii_monthly_yield: Decimal) -> Decimal:
+    """Renda mensal estimada (R$) da posição que paga mensal (FII/ação):
+    saldo × dividend yield mensal. O Pluggy não entrega o provento, então é
+    estimativa. Zero para o que não paga mensal (ex.: CDB, que vence no prazo)."""
+    if not is_variable_income(investment):
         return _ZERO
-    rate = effective_annual_rate(investment, cdi_annual_pct)
-    if rate is None:
-        return _ZERO
-    return investment.balance * (rate / _HUNDRED) / _TWELVE
+    return investment.balance * fii_monthly_yield / _HUNDRED
 
 
 def total_monthly_income(
-    investments: Iterable[Investment], cdi_annual_pct: Decimal
+    investments: Iterable[Investment], fii_monthly_yield: Decimal
 ) -> Decimal:
-    """Renda fixa mensal estimada somando todas as posições de renda fixa."""
-    return sum((monthly_income(i, cdi_annual_pct) for i in investments), _ZERO)
+    """Renda mensal estimada somando as posições que pagam mensal (FIIs/ações)."""
+    return sum((monthly_income(i, fii_monthly_yield) for i in investments), _ZERO)
 
 
 def _month_index(year: int, month: int) -> int:
