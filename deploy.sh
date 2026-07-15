@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# deploy.sh — sobe o Consolida (PVN Finance) em produção, do zero, num comando.
+# deploy.sh — sobe o Consolida (PVN Finance) em produção atrás do nginx do host.
 #
 #   ./deploy.sh
 #
@@ -9,9 +9,10 @@
 #   2. Cria o .env a partir do .env.example na primeira execução.
 #   3. Gera segredos fortes (JWT_SECRET, VAULT_KEY, POSTGRES_PASSWORD) se ainda
 #      forem os placeholders — e NÃO os regenera nas próximas execuções.
-#   4. Configura HTTPS automático se você definir DOMAIN no .env.
-#   5. Faz build e sobe db + api + worker + web (Caddy). Migrations rodam no boot.
-#   6. Espera a API ficar saudável e mostra o status.
+#   4. Faz build e sobe db + api + worker + web. Migrations rodam no boot.
+#      O `web` (nginx do SPA + proxy /api) é publicado em 127.0.0.1:WEB_PORT.
+#   5. Gera o server block do nginx do HOST (nginx-host.conf) com o seu DOMAIN.
+#   6. Espera a API ficar saudável e mostra os próximos passos.
 #
 set -euo pipefail
 
@@ -89,26 +90,22 @@ if is_placeholder "$(get_env POSTGRES_PASSWORD)"; then
   set_env POSTGRES_PASSWORD "$(openssl rand -hex 24)"; ok "POSTGRES_PASSWORD gerada."
 else ok "POSTGRES_PASSWORD já definida."; fi
 
-# APP_ENV de produção
 set_env APP_ENV production
 
+WEB_PORT="$(get_env WEB_PORT)"; WEB_PORT="${WEB_PORT:-8080}"
+set_env WEB_PORT "$WEB_PORT"
+
 # ---------------------------------------------------------------------------
-# 4. Domínio / HTTPS
+# 4. Domínio + CORS (a app proíbe CORS_ORIGINS='*' em produção)
 # ---------------------------------------------------------------------------
 DOMAIN="$(get_env DOMAIN)"
 if [ -n "$DOMAIN" ]; then
-  set_env SITE_ADDRESS "$DOMAIN"
   set_env CORS_ORIGINS "https://${DOMAIN}"
-  ok "Domínio: ${DOMAIN} → Caddy vai emitir HTTPS automaticamente."
-  warn "Garanta que o DNS de ${DOMAIN} aponta para este servidor e que as portas 80/443 estão abertas."
+  ok "Domínio: ${DOMAIN} (o nginx do host faz o TLS)."
 else
-  set_env SITE_ADDRESS ":80"
-  # A app proíbe CORS_ORIGINS='*' em produção. Como o Caddy serve front e API
-  # na MESMA origem, o CORS nem é exercido em runtime — mas a guarda de boot
-  # exige um valor concreto. Usa o IP do servidor.
   ip="$(hostname -I 2>/dev/null | awk '{print $1}')"; ip="${ip:-localhost}"
   set_env CORS_ORIGINS "http://${ip}"
-  warn "Sem DOMAIN no .env → servindo em HTTP na porta 80. Para HTTPS, defina DOMAIN=seu.dominio.com no .env e rode de novo."
+  warn "Sem DOMAIN no .env — defina DOMAIN=seu.dominio.com para gerar o server block do nginx com TLS."
 fi
 
 # Aviso (não bloqueia) se as credenciais do Pluggy estiverem vazias
@@ -123,7 +120,17 @@ info "Subindo a stack (build + up)… isso pode levar alguns minutos na 1ª vez.
 "${COMPOSE[@]}" up -d --build
 
 # ---------------------------------------------------------------------------
-# 6. Health check
+# 6. Server block do nginx do host
+# ---------------------------------------------------------------------------
+if [ -n "$DOMAIN" ] && [ -f "deploy/nginx-host.conf.example" ]; then
+  sed -e "s/SEU_DOMINIO/${DOMAIN}/g" \
+      -e "s#127.0.0.1:8080#127.0.0.1:${WEB_PORT}#g" \
+      deploy/nginx-host.conf.example > nginx-host.conf
+  ok "Gerei o nginx-host.conf para ${DOMAIN} (porta ${WEB_PORT})."
+fi
+
+# ---------------------------------------------------------------------------
+# 7. Health check
 # ---------------------------------------------------------------------------
 info "Esperando a API ficar saudável…"
 api_cid="$("${COMPOSE[@]}" ps -q api)"
@@ -139,18 +146,24 @@ done
 
 echo
 if [ -n "$healthy" ]; then
-  ok "${c_bold}Deploy concluído.${c_off}"
+  ok "${c_bold}Stack no ar.${c_off} App em http://127.0.0.1:${WEB_PORT} (loopback)."
 else
-  warn "A API ainda não reportou 'healthy'. Verifique os logs: ${COMPOSE[*]} logs -f api"
+  warn "A API ainda não reportou 'healthy'. Verifique: ${COMPOSE[*]} logs -f api"
 fi
-
 "${COMPOSE[@]}" ps
 echo
+printf '%sPróximo passo — nginx do host:%s\n' "$c_bold" "$c_off"
 if [ -n "$DOMAIN" ]; then
-  printf '%sAcesse:%s https://%s\n' "$c_bold" "$c_off" "$DOMAIN"
+  cat <<EOF
+  sudo cp nginx-host.conf /etc/nginx/sites-available/consolida
+  sudo ln -sf /etc/nginx/sites-available/consolida /etc/nginx/sites-enabled/
+  sudo nginx -t && sudo systemctl reload nginx
+  sudo certbot --nginx -d ${DOMAIN}      # emite o TLS
+EOF
 else
-  ip="$(hostname -I 2>/dev/null | awk '{print $1}')"; ip="${ip:-localhost}"
-  printf '%sAcesse:%s http://%s\n' "$c_bold" "$c_off" "$ip"
+  echo "  Defina DOMAIN=seu.dominio.com no .env e rode ./deploy.sh de novo para gerar o server block."
+  echo "  (Modelo pronto em deploy/nginx-host.conf.example — aponte o proxy_pass para 127.0.0.1:${WEB_PORT}.)"
 fi
+echo
 echo "Logs:      ${COMPOSE[*]} logs -f"
 echo "Derrubar:  ${COMPOSE[*]} down"

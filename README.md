@@ -88,11 +88,18 @@ O script (`deploy.sh` + `docker-compose.prod.yml`):
 - cria o `.env` a partir do `.env.example` na primeira execução;
 - **gera segredos fortes** (`JWT_SECRET`, `VAULT_KEY` Fernet, `POSTGRES_PASSWORD`) se ainda forem os placeholders — e não os regenera depois;
 - faz build e sobe tudo; as **migrations rodam no boot** da API;
-- espera a API ficar saudável e mostra o status.
+- publica o `web` só no loopback (`127.0.0.1:${WEB_PORT:-8080}`) e gera o `nginx-host.conf`.
 
-**HTTPS automático:** defina `DOMAIN=seu.dominio.com` no `.env` (DNS apontando para o servidor, portas 80/443 abertas) e rode de novo — o [Caddy](https://caddyserver.com) emite e renova o certificado sozinho. Sem `DOMAIN`, serve em HTTP na porta 80.
+**Arquitetura de produção:** feita para ficar **atrás do nginx do host** (que já ocupa a 80/443 e faz o TLS via certbot). O serviço `web` é um **nginx** que serve o SPA e faz proxy de `/api/*` → API (mesma origem, sem CORS), publicado apenas em `127.0.0.1:8080`. Postgres e API ficam na rede interna do compose. O `VITE_API_URL` é embutido como `/api` no build.
 
-**Arquitetura de produção:** só o serviço `web` (Caddy) fica exposto — ele serve o SPA e faz proxy de `/api/*` para a API (mesma origem, sem CORS). Postgres e API ficam na rede interna do compose. O `VITE_API_URL` é embutido como `/api` no build.
+**nginx do host:** defina `DOMAIN=seu.dominio.com` no `.env` e rode `./deploy.sh` — ele gera o `nginx-host.conf` (a partir de [`deploy/nginx-host.conf.example`](deploy/nginx-host.conf.example)). Depois:
+
+```bash
+sudo cp nginx-host.conf /etc/nginx/sites-available/consolida
+sudo ln -sf /etc/nginx/sites-available/consolida /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+sudo certbot --nginx -d seu.dominio.com   # emite o TLS
+```
 
 ```bash
 docker compose -f docker-compose.prod.yml logs -f   # logs
