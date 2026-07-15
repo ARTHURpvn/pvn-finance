@@ -1,5 +1,6 @@
-# Stack de produção. Só o serviço `web` (Caddy) é exposto na internet;
-# a API e o banco ficam na rede interna do compose.
+# Stack de produção. O nginx do HOST (na 80/443, com TLS) faz proxy para o
+# serviço `web`, que é publicado só no loopback (127.0.0.1). A API e o banco
+# ficam na rede interna do compose.
 # Suba com: ./deploy.sh  (ou: docker compose -f docker-compose.prod.yml up -d --build)
 
 services:
@@ -26,7 +27,7 @@ services:
       # DATABASE_URL derivada dos POSTGRES_* — sempre em sincronia com a senha.
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-consolida}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-consolida}
       APP_ENV: production
-      TRUST_FORWARDED_FOR: "true"  # atrás do Caddy: enxerga o IP real do cliente
+      TRUST_FORWARDED_FOR: "true"  # atrás do nginx: enxerga o IP real do cliente
     depends_on:
       db:
         condition: service_healthy
@@ -57,19 +58,11 @@ services:
       args:
         VITE_API_URL: /api
     restart: unless-stopped
-    environment:
-      # Domínio p/ HTTPS automático; vazio → :80 (HTTP). Definido pelo deploy.sh.
-      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
     depends_on:
       - api
+    # Publicado só no loopback — o nginx do host faz o proxy + TLS.
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - caddy_data:/data
-      - caddy_config:/config
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
 
 volumes:
   pgdata:
-  caddy_data:
-  caddy_config:
