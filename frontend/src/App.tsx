@@ -6,6 +6,7 @@ import { ComingSoonPage } from '@/pages/ComingSoonPage'
 import { ConfigPage } from '@/pages/ConfigPage'
 import { DashboardPage } from '@/pages/DashboardPage'
 import { ExtratoPage } from '@/pages/ExtratoPage'
+import { InvestimentosPage } from '@/pages/InvestimentosPage'
 import { LoginPage } from '@/pages/LoginPage'
 import { RegisterPage } from '@/pages/RegisterPage'
 
@@ -23,10 +24,7 @@ function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/" element={<Protected><DashboardPage /></Protected>} />
-      <Route
-        path="/investimentos"
-        element={<Protected><ComingSoonPage title="Investimentos" /></Protected>}
-      />
+      <Route path="/investimentos" element={<Protected><InvestimentosPage /></Protected>} />
       <Route path="/extrato" element={<Protected><ExtratoPage /></Protected>} />
       <Route
         path="/metas"

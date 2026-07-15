@@ -255,19 +255,47 @@ class PluggyAdapter:
         )
 
     @staticmethod
-    def _map_investment(raw: dict[str, Any]) -> ProviderInvestment:
+    def _dec(raw: dict[str, Any], key: str) -> Decimal | None:
+        """Decimal opcional de um campo do Pluggy (None se ausente/nulo)."""
+        v = raw.get(key)
+        return None if v is None else Decimal(str(v))
+
+    @staticmethod
+    def _date(raw: dict[str, Any], key: str) -> date_type | None:
+        v = raw.get(key)
+        return _parse_date(v) if v else None
+
+    @classmethod
+    def _map_investment(cls, raw: dict[str, Any]) -> ProviderInvestment:
         # `balance` é o valor atual (net worth) da posição; cai para `amount`
         # se ausente. Investimentos zerados (resgatados) têm balance 0.
-        value = raw.get("balance")
-        if value is None:
-            value = raw.get("amount", "0")
+        balance = raw.get("balance")
+        if balance is None:
+            balance = raw.get("amount", "0")
+        # Banco/instituição: preferimos o `institution.name`; senão o issuer.
+        institution = raw.get("institution")
+        institution_name = (
+            institution.get("name") if isinstance(institution, dict) else None
+        ) or raw.get("issuer")
         return ProviderInvestment(
             provider_investment_id=raw["id"],
             name=raw.get("name") or "Investimento",
             type=raw.get("type") or "",
             subtype=raw.get("subtype"),
-            balance=Decimal(str(value or "0")),
+            balance=Decimal(str(balance or "0")),
             currency=raw.get("currencyCode") or "BRL",
+            amount_original=cls._dec(raw, "amountOriginal"),
+            amount_profit=cls._dec(raw, "amountProfit"),
+            value=cls._dec(raw, "value"),
+            quantity=cls._dec(raw, "quantity"),
+            rate=cls._dec(raw, "rate"),
+            rate_type=raw.get("rateType"),
+            annual_rate=cls._dec(raw, "annualRate"),
+            last_month_rate=cls._dec(raw, "lastMonthRate"),
+            last_twelve_months_rate=cls._dec(raw, "lastTwelveMonthsRate"),
+            due_date=cls._date(raw, "dueDate"),
+            purchase_date=cls._date(raw, "purchaseDate"),
+            institution=institution_name,
         )
 
     @staticmethod

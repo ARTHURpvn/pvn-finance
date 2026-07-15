@@ -80,6 +80,19 @@ class ProviderInvestment:
     balance: Decimal
     currency: str = "BRL"
     subtype: str | None = None
+    # Detalhe (renda fixa mensal, ganho/perda, evolução, banco).
+    amount_original: Decimal | None = None
+    amount_profit: Decimal | None = None
+    value: Decimal | None = None
+    quantity: Decimal | None = None
+    rate: Decimal | None = None
+    rate_type: str | None = None
+    annual_rate: Decimal | None = None
+    last_month_rate: Decimal | None = None
+    last_twelve_months_rate: Decimal | None = None
+    due_date: date_type | None = None
+    purchase_date: date_type | None = None
+    institution: str | None = None
 
 
 class FinancialDataPort(Protocol):
