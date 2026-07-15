@@ -36,12 +36,20 @@ def _s(value: object | None) -> str | None:
     return None if value is None else str(value)
 
 
-def _bank_of(name: str, institution: str | None, conn_institution: str | None) -> str:
+_VARIABLE_INCOME = frozenset({"EQUITY", "ETF"})
+
+
+def _bank_of(
+    name: str, type_: str, institution: str | None, conn_institution: str | None
+) -> str:
     """Banco/corretora onde o ativo está aplicado. Em produção, cada conexão é
     uma instituição real (ex.: XP) → usa ela direto. No sandbox tudo vem como
-    'MeuPluggy', então derivamos do nome/emissor (só para um demo legível)."""
+    'MeuPluggy', então derivamos do tipo/nome (só para um demo legível)."""
     if conn_institution and conn_institution.strip().lower() != "meupluggy":
         return conn_institution
+    # A renda variável (ações/FIIs) do usuário fica toda no XP.
+    if type_.upper() in _VARIABLE_INCOME:
+        return "XP Investimentos"
     text = f"{name} {institution or ''}".lower()
     if any(k in text for k in ("nu financeira", "nubank", "nu pagamentos")):
         return "Nubank"
@@ -77,7 +85,9 @@ def list_investments(
             name=i.name,
             type=i.type,
             subtype=i.subtype,
-            bank=_bank_of(i.name, i.institution, conn_bank.get(i.connection_id)),
+            bank=_bank_of(
+                i.name, i.type, i.institution, conn_bank.get(i.connection_id)
+            ),
             balance=str(i.balance),
             amount_original=_s(i.amount_original),
             profit=_s(profit(i)),
