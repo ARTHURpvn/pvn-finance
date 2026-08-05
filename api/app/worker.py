@@ -7,7 +7,6 @@ import time
 from datetime import UTC, datetime
 
 from app.application.scheduler import sync_due_connections
-from app.bootstrap import make_financial_adapter
 from app.config import get_settings
 from app.infrastructure.db import get_sessionmaker
 from app.logging_config import get_logger, setup_logging
@@ -17,14 +16,11 @@ logger = get_logger("consolida.worker")
 
 def run_once() -> None:
     settings = get_settings()
-    adapter = make_financial_adapter()
-    if adapter is None:
-        logger.warning("worker.skip reason=adapter_unconfigured")
-        return
+    # Cada conexão devida sincroniza com as credenciais Pluggy do próprio dono
+    # (multi-tenant); conexões sem credencial configurada são puladas.
     with get_sessionmaker()() as session:
         sync_due_connections(
             session=session,
-            adapter=adapter,
             now=datetime.now(UTC),
             stale_minutes=settings.sync_stale_minutes,
         )

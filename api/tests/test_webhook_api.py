@@ -27,8 +27,10 @@ def _reset_webhook_state() -> Iterator[None]:
 
 
 def _use_background_adapter(monkeypatch: pytest.MonkeyPatch, adapter) -> None:
-    """O sync em background usa make_financial_adapter (fora do request)."""
-    monkeypatch.setattr(webhooks, "make_financial_adapter", lambda: adapter)
+    """O sync em background usa make_user_adapter (adapter do dono da conexão)."""
+    monkeypatch.setattr(
+        webhooks, "make_user_adapter", lambda session, user_id: adapter
+    )
 
 
 def _register_item(client: TestClient, headers: dict[str, str], item_id: str) -> None:

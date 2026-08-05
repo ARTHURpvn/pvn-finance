@@ -3,9 +3,11 @@
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+import pytest
 from sqlalchemy.orm import Session
 
 from app.adapters.fake import FakeFinancialDataAdapter
+from app.application import scheduler
 from app.application.scheduler import sync_due_connections
 from app.domain.connection import ConnectionStatus
 from app.infrastructure.connection_repository import SqlConnectionRepository
@@ -41,11 +43,15 @@ def _make_connection(session: Session, email: str):
     )
 
 
-def test_sweep_syncs_due_connection(db_session: Session) -> None:
+def test_sweep_syncs_due_connection(
+    db_session: Session, monkeypatch: pytest.MonkeyPatch
+) -> None:
     conn = _make_connection(db_session, "sched1@e.com")
+    # cada conexão usa o adapter do seu dono; injetamos o fake.
+    monkeypatch.setattr(scheduler, "make_user_adapter", lambda session, user_id: _fake())
 
     result = sync_due_connections(
-        session=db_session, adapter=_fake(), now=datetime.now(UTC), stale_minutes=60
+        session=db_session, now=datetime.now(UTC), stale_minutes=60
     )
 
     assert result.succeeded >= 1

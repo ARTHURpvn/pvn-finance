@@ -227,3 +227,18 @@ class InvestmentsResponse(BaseModel):
     investments: list[InvestmentDetailResponse]
     summary: InvestmentsSummary
     evolution: list[InvestmentEvolutionPoint]
+
+
+# ---- Credenciais Pluggy por usuário --------------------------------------
+
+
+class PluggyCredentialInput(BaseModel):
+    client_id: str = Field(min_length=1, max_length=255)
+    client_secret: str = Field(min_length=1, max_length=512)
+    base_url: str = Field(default="https://api.pluggy.ai", max_length=255)
+
+
+class PluggyCredentialStatusResponse(BaseModel):
+    configured: bool
+    client_id: str | None = None  # o client_id não é segredo; o secret nunca sai
+    base_url: str | None = None
