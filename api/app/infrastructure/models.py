@@ -321,3 +321,37 @@ class RuleModel(Base):
         nullable=False,
     )
     priority: Mapped[int] = mapped_column(Integer, nullable=False, server_default="100")
+
+
+class PluggyCredentialModel(Base):
+    """Credenciais Pluggy por usuário (multi-tenant). O client_secret é cifrado
+    em repouso (Fernet, ADR-005) e nunca é retornado pela API."""
+
+    __tablename__ = "pluggy_credentials"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, default=uuid.uuid4
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        unique=True,
+        index=True,
+    )
+    client_id: Mapped[str] = mapped_column(String(255), nullable=False)
+    encrypted_client_secret: Mapped[bytes] = mapped_column(
+        LargeBinary, nullable=False
+    )
+    base_url: Mapped[str] = mapped_column(
+        String(255), nullable=False, server_default="https://api.pluggy.ai"
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+        nullable=False,
+    )

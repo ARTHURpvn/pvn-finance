@@ -36,10 +36,9 @@ class Settings(BaseSettings):
     # Cofre de credenciais (F4 / ADR-005) — chave Fernet, separada do banco.
     vault_key: str
 
-    # Agregador Pluggy (F4) — opcionais; app sobe sem eles.
-    pluggy_client_id: str | None = None
-    pluggy_client_secret: str | None = None
-    pluggy_base_url: str = "https://api.pluggy.ai"
+    # Agregador Pluggy: as credenciais (clientId/clientSecret/baseUrl) são POR
+    # USUÁRIO, definidas em Configurações e cifradas no banco — não ficam mais
+    # no ambiente (multi-tenant).
 
     # URL pública do receptor de webhook, enviada no connect_token
     # (options.webhookUrl). Sem ela, os itens criados não notificam.

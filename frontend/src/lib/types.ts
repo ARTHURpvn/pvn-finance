@@ -27,6 +27,12 @@ export interface ConnectTokenResponse {
   connect_token: string
 }
 
+export interface PluggyCredentialStatus {
+  configured: boolean
+  client_id: string | null
+  base_url: string | null
+}
+
 export interface SyncResult {
   status: string
   imported: number

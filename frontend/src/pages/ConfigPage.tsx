@@ -12,13 +12,14 @@ import {
   IconTrash,
 } from '@/components/icons'
 import { display } from '@/lib/styles'
-import { apiFetch } from '@/lib/api'
+import { ApiError, apiFetch } from '@/lib/api'
 import { useAuth } from '@/lib/auth'
 import { useTheme } from '@/lib/theme'
 import { formatDate } from '@/lib/format'
 import type {
   Connection,
   ConnectTokenResponse,
+  PluggyCredentialStatus,
   SyncResult,
 } from '@/lib/types'
 
@@ -39,6 +40,7 @@ export function ConfigPage() {
   const [connections, setConnections] = useState<Connection[]>([])
   const [busy, setBusy] = useState<string | null>(null)
   const [connect, setConnect] = useState<ConnectFlow | null>(null)
+  const [pluggyOk, setPluggyOk] = useState(false)
 
   const load = useCallback(async () => {
     try {
@@ -106,6 +108,8 @@ export function ConfigPage() {
     <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 18, width: '100%', maxWidth: 880 }}>
       <div style={{ ...display, fontSize: 26 }}>Configurações</div>
 
+      <PluggyCredentialsCard onChange={setPluggyOk} />
+
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <span style={{ fontWeight: 700, fontSize: 17 }}>Contas e bancos</span>
@@ -144,9 +148,14 @@ export function ConfigPage() {
           </div>
         ))}
 
-        <button onClick={handleConnect} className="u-ghost" style={{ cursor: 'pointer', fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 14, color: 'var(--accent)', background: 'transparent', border: '1.5px dashed var(--line-2)', borderRadius: 14, padding: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        <button onClick={handleConnect} disabled={!pluggyOk} className="u-ghost" title={pluggyOk ? '' : 'Configure suas credenciais Pluggy acima primeiro'} style={{ cursor: pluggyOk ? 'pointer' : 'not-allowed', opacity: pluggyOk ? 1 : 0.55, fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 14, color: 'var(--accent)', background: 'transparent', border: '1.5px dashed var(--line-2)', borderRadius: 14, padding: 15, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
           <IconPlus size={16} /> conectar nova conta via Pluggy
         </button>
+        {!pluggyOk && (
+          <div style={{ fontSize: 12, color: 'var(--ink-soft)', textAlign: 'center' }}>
+            Configure suas credenciais Pluggy acima para poder conectar bancos.
+          </div>
+        )}
       </Card>
 
       <Card style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -192,6 +201,160 @@ export function ConfigPage() {
   )
 }
 
+function PluggyCredentialsCard({ onChange }: { onChange: (ok: boolean) => void }) {
+  const [status, setStatus] = useState<PluggyCredentialStatus | null>(null)
+  const [clientId, setClientId] = useState('')
+  const [clientSecret, setClientSecret] = useState('')
+  const [baseUrl, setBaseUrl] = useState('https://api.pluggy.ai')
+  const [saving, setSaving] = useState(false)
+  const [editing, setEditing] = useState(false)
+
+  const load = useCallback(async () => {
+    try {
+      const s = await apiFetch<PluggyCredentialStatus>('/settings/pluggy')
+      setStatus(s)
+      onChange(s.configured)
+      if (s.configured) {
+        setClientId(s.client_id ?? '')
+        setBaseUrl(s.base_url ?? 'https://api.pluggy.ai')
+      }
+    } catch {
+      /* silencioso */
+    }
+  }, [onChange])
+
+  useEffect(() => {
+    void load()
+  }, [load])
+
+  async function save() {
+    if (!clientId.trim() || !clientSecret.trim()) {
+      toast.error('Preencha o Client ID e o Client Secret')
+      return
+    }
+    setSaving(true)
+    try {
+      const s = await apiFetch<PluggyCredentialStatus>('/settings/pluggy', {
+        method: 'PUT',
+        body: JSON.stringify({
+          client_id: clientId.trim(),
+          client_secret: clientSecret,
+          base_url: baseUrl.trim() || 'https://api.pluggy.ai',
+        }),
+      })
+      setStatus(s)
+      onChange(s.configured)
+      setClientSecret('')
+      setEditing(false)
+      toast.success('Credenciais Pluggy salvas e validadas')
+    } catch (e) {
+      toast.error(
+        e instanceof ApiError && e.status === 400
+          ? 'Credenciais inválidas — o Pluggy recusou o Client ID/Secret'
+          : 'Falha ao salvar as credenciais',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function remove() {
+    if (!confirm('Remover suas credenciais Pluggy? Você não conseguirá sincronizar até cadastrar de novo.')) return
+    try {
+      await apiFetch('/settings/pluggy', { method: 'DELETE' })
+      setStatus({ configured: false, client_id: null, base_url: null })
+      setClientId('')
+      setClientSecret('')
+      onChange(false)
+      toast.success('Credenciais removidas')
+    } catch {
+      toast.error('Falha ao remover')
+    }
+  }
+
+  const configured = status?.configured ?? false
+  const showForm = !configured || editing
+
+  return (
+    <Card style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span style={{ fontWeight: 700, fontSize: 17 }}>Credenciais Pluggy</span>
+        <span
+          style={{
+            fontFamily: 'var(--sans)', fontWeight: 700, fontSize: 11.5, padding: '5px 11px', borderRadius: 30,
+            background: configured ? 'var(--ok)' : 'var(--fill)',
+            color: configured ? '#fff' : 'var(--ink-soft)',
+          }}
+        >
+          {configured ? '● configurado' : 'não configurado'}
+        </span>
+      </div>
+      <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
+        Pegue o <b style={{ color: 'var(--ink)' }}>Client ID</b> e o{' '}
+        <b style={{ color: 'var(--ink)' }}>Client Secret</b> no dashboard do Pluggy
+        (app.pluggy.ai → sua aplicação). Ficam cifrados e ligados à sua conta —
+        o segredo nunca é exibido depois de salvo.
+      </div>
+
+      {configured && !editing ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200, fontSize: 13 }}>
+            <div><span style={{ color: 'var(--ink-soft)' }}>Client ID:</span> {status?.client_id}</div>
+            <div style={{ color: 'var(--ink-soft)' }}>Base URL: {status?.base_url}</div>
+          </div>
+          <button onClick={() => setEditing(true)} className="u-ghost" style={ghostBtn}>
+            <IconRefresh size={14} /> atualizar
+          </button>
+          <button onClick={remove} className="u-ghost" style={dangerBtn}>
+            <IconTrash size={14} /> remover
+          </button>
+        </div>
+      ) : showForm ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <input style={inputStyle} placeholder="Client ID" value={clientId} onChange={(e) => setClientId(e.target.value)} autoComplete="off" />
+          <input style={inputStyle} type="password" placeholder="Client Secret" value={clientSecret} onChange={(e) => setClientSecret(e.target.value)} autoComplete="new-password" />
+          <input style={inputStyle} placeholder="Base URL (padrão https://api.pluggy.ai)" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} autoComplete="off" />
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={save} disabled={saving} style={{ ...primaryBtn, opacity: saving ? 0.6 : 1 }}>
+              <IconBolt size={14} /> {saving ? 'validando…' : 'salvar e validar'}
+            </button>
+            {editing && (
+              <button onClick={() => { setEditing(false); setClientSecret('') }} className="u-ghost" style={ghostBtn}>
+                cancelar
+              </button>
+            )}
+          </div>
+        </div>
+      ) : null}
+    </Card>
+  )
+}
+
+const inputStyle: React.CSSProperties = {
+  fontFamily: 'var(--sans)',
+  fontSize: 14,
+  padding: '11px 13px',
+  border: '1.5px solid var(--line-2)',
+  borderRadius: 11,
+  background: 'var(--panel)',
+  color: 'var(--ink)',
+  width: '100%',
+  boxSizing: 'border-box',
+}
+const primaryBtn: React.CSSProperties = {
+  cursor: 'pointer',
+  fontFamily: 'var(--sans)',
+  fontWeight: 700,
+  fontSize: 13.5,
+  padding: '10px 18px',
+  border: 'none',
+  borderRadius: 11,
+  background: 'var(--accent)',
+  color: 'var(--accent-ink)',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 7,
+}
 const ghostBtn: React.CSSProperties = {
   cursor: 'pointer',
   fontFamily: 'var(--sans)',

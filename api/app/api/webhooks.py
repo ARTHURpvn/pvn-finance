@@ -18,7 +18,7 @@ from fastapi import APIRouter, BackgroundTasks, Request
 
 from app.api.errors import api_error
 from app.application.sync_service import ConnectionNotFound, SyncFailed
-from app.bootstrap import build_sync_service, make_financial_adapter
+from app.bootstrap import build_sync_service, make_user_adapter
 from app.config import Settings, get_settings
 from app.infrastructure.connection_repository import SqlConnectionRepository
 from app.infrastructure.db import get_sessionmaker
@@ -101,11 +101,15 @@ def _authorized(request: Request, settings: Settings) -> bool:
 
 
 def _run_sync(connection_id: UUID, user_id: UUID) -> None:
-    adapter = make_financial_adapter()
-    if adapter is None:
-        logger.warning("webhook.sync_skipped reason=adapter_unconfigured")
-        return
     with get_sessionmaker()() as session:
+        # Sincroniza com as credenciais Pluggy do dono da conexão (multi-tenant).
+        adapter = make_user_adapter(session, user_id)
+        if adapter is None:
+            logger.warning(
+                "webhook.sync_skipped connection_id=%s reason=no_credentials",
+                connection_id,
+            )
+            return
         try:
             result = build_sync_service(session, adapter).sync(
                 connection_id=connection_id, user_id=user_id

@@ -11,7 +11,7 @@ from app.api.errors import api_error
 from app.application.auth_service import AuthService
 from app.application.connection_service import ConnectionService
 from app.application.sync_service import SyncService
-from app.bootstrap import build_sync_service, make_financial_adapter
+from app.bootstrap import build_sync_service, make_user_adapter
 from app.config import get_settings
 from app.domain.user import User
 from app.infrastructure.connection_repository import SqlConnectionRepository
@@ -73,12 +73,14 @@ def enforce_api_rate_limit(current_user: CurrentUser, request: Request) -> None:
 ApiRateLimit = Depends(enforce_api_rate_limit)
 
 
-def get_financial_adapter() -> FinancialDataPort:
-    adapter = make_financial_adapter()
+def get_financial_adapter(
+    session: SessionDep, current_user: CurrentUser
+) -> FinancialDataPort:
+    adapter = make_user_adapter(session, current_user.id)
     if adapter is None:
         raise api_error(
-            code="aggregator_not_configured",
-            message="Agregador (Pluggy) não configurado",
+            code="pluggy_not_configured",
+            message="Configure suas credenciais Pluggy em Configurações.",
             status_code=503,
         )
     return adapter
