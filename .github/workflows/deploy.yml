@@ -1,0 +1,90 @@
+# =============================================================================
+# Build das imagens e publicação no GHCR.
+#
+# A VPS NUNCA compila. São 4 GB rodando cinco projetos; um build de Vite ou uma
+# resolução de dependências Python pica em GB e aciona o OOM Killer, derrubando
+# serviço que não tem nada a ver com o build. Todo o build acontece aqui, e a
+# VPS só faz `pull` de imagem pronta.
+#
+# São DUAS imagens porque são dois runtimes: `api` (Python/uvicorn, a mesma
+# imagem que vira api e worker) e `web` (estático servido por nginx, que também
+# faz o proxy de /api para a api).
+# =============================================================================
+name: deploy
+
+# `workflow_run` e não `push`: o gate de teste é o workflow CI, que já roda no
+# mesmo push. Encadear evita duplicar as suítes aqui E garante que imagem
+# nenhuma seja publicada a partir de código que reprovou — publicar primeiro e
+# descobrir depois é como um deploy quebrado chega em produção sem ninguém ver.
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # O GHCR exige o path da imagem em MINÚSCULAS, e `github.repository` preserva
+  # a capitalização do dono ("ARTHURpvn/..."). Sem forçar o caixa-baixo, o push
+  # falha com "invalid reference format" — erro que não menciona maiúsculas.
+  IMAGEM_BASE: ghcr.io/arthurpvn/pvn-finance
+
+jobs:
+  build:
+    # Sem isto o job roda também quando o CI FALHA — `types: [completed]` quer
+    # dizer "terminou", não "deu certo".
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      # `fail-fast: false` de propósito: se o web quebrar, ainda quero saber se
+      # a api estava boa — e vice-versa. Com o padrão, o segundo é cancelado e
+      # o log some.
+      fail-fast: false
+      matrix:
+        include:
+          - nome: api
+            contexto: ./api
+          - nome: web
+            contexto: ./frontend
+    steps:
+      # Em `workflow_run`, o ref default é o head do branch padrão, NÃO o commit
+      # que disparou o CI. Sem fixar o sha, um push logo em seguida faria esta
+      # execução construir um código diferente do que foi testado.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: build e push
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.contexto }}
+          push: true
+          # DUAS tags sempre. `:latest` é o que o compose referencia no dia a
+          # dia; `:<sha>` é o rollback — e precisa ser o sha, porque `latest` é
+          # mutável e não reproduz estado nenhum.
+          tags: |
+            ${{ env.IMAGEM_BASE }}-${{ matrix.nome }}:latest
+            ${{ env.IMAGEM_BASE }}-${{ matrix.nome }}:${{ github.event.workflow_run.head_sha }}
+          # VITE_API_URL entra no bundle em tempo de BUILD, não de runtime. É
+          # caminho relativo porque o nginx da própria imagem faz o proxy de
+          # /api para a api — nada de host aqui, senão o bundle fica preso a um
+          # domínio e quebra em qualquer outro.
+          build-args: |
+            VITE_API_URL=/api
+          # Sem cache de camadas, cada build reinstala todas as dependências.
+          cache-from: type=gha,scope=${{ matrix.nome }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.nome }}
