@@ -1,15 +1,44 @@
-# Stack de produção. O nginx do HOST (na 80/443, com TLS) faz proxy para o
-# serviço `web`, que é publicado só no loopback (127.0.0.1). A API e o banco
-# ficam na rede interna do compose.
-# Suba com: ./deploy.sh  (ou: docker compose -f docker-compose.prod.yml up -d --build)
+# =============================================================================
+# Stack de PRODUÇÃO (VPS com Dokploy).
+#
+# A VPS NUNCA compila. Ela tem 4 GB e roda cinco projetos; um build de Vite ou
+# uma resolução de dependências Python pica em GB e, sem folga, o OOM Killer
+# mata processo de serviço que não tem nada a ver. Por isso: `image:`, nunca
+# `build:`. Quem constrói é o GitHub Actions (.github/workflows/deploy.yml),
+# que publica no GHCR; aqui só se faz `pull`.
+#
+# TLS e roteamento são do TRAEFIK do Dokploy — não há nginx no host. Por isso
+# nenhum serviço publica porta: o Traefik alcança o `web` pelo nome, dentro da
+# `dokploy-network`. O `web` é o único exposto; ele mesmo faz o proxy de /api
+# para a api, então basta UM domínio apontando para ele.
+#
+# Rollback: troque TAG para o sha de um deploy anterior e suba de novo. Nunca
+# use `latest` como referência de rollback — ela é mutável e não reproduz
+# estado nenhum.
+#
+#     TAG=a3f9c21... docker compose -f docker-compose.prod.yml up -d
+# =============================================================================
+
+x-api-imagem: &api-imagem
+  image: ghcr.io/arthurpvn/pvn-finance-api:${TAG:-latest}
+
+# Escrito pelo Dokploy a partir do Environment do painel, ao lado deste arquivo.
+# Precisa ser declarado: sem `env_file` o Compose lê o `.env` apenas para
+# interpolar ${VAR} dentro do próprio yaml — nada disso chega ao container, e o
+# sintoma é o app subir sem configuração e morrer com erro de campo faltando,
+# que manda procurar defeito no painel em vez de na fiação entre os dois.
+x-envfile: &envfile
+  - path: ./.env
+    required: true
 
 services:
   db:
     image: postgres:16-alpine
     restart: unless-stopped
+    networks: [interna]
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-consolida}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?defina POSTGRES_PASSWORD no Environment do Dokploy}
       POSTGRES_DB: ${POSTGRES_DB:-consolida}
     volumes:
       - pgdata:/var/lib/postgresql/data
@@ -18,16 +47,29 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+    deploy:
+      resources:
+        limits: {memory: 320M}
+        reservations: {memory: 160M}
 
   api:
-    build: ./api
+    <<: *api-imagem
     restart: unless-stopped
-    env_file: .env
+    env_file: *envfile
+    networks:
+      interna:
+        # Alias ÚNICO, e é o que o nginx do `web` usa. O nome de serviço `api`
+        # é genérico demais: o `web` fica também na `dokploy-network`, que é
+        # compartilhada com os outros projetos da VPS, e lá um `api` de outro
+        # projeto responderia no lugar deste. Já aconteceu com `frontend`, e o
+        # sintoma foi um 502 que não aponta para DNS nenhum.
+        aliases: [pvn-finance-api]
     environment:
       # DATABASE_URL derivada dos POSTGRES_* — sempre em sincronia com a senha.
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-consolida}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-consolida}
       APP_ENV: production
-      TRUST_FORWARDED_FOR: "true"  # atrás do nginx: enxerga o IP real do cliente
+      # Atrás do Traefik: o IP real do cliente vem no X-Forwarded-For.
+      TRUST_FORWARDED_FOR: "true"
     depends_on:
       db:
         condition: service_healthy
@@ -39,11 +81,16 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    deploy:
+      resources:
+        limits: {memory: 448M}
+        reservations: {memory: 224M}
 
   worker:
-    build: ./api
+    <<: *api-imagem
     restart: unless-stopped
-    env_file: .env
+    env_file: *envfile
+    networks: [interna]
     environment:
       DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-consolida}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-consolida}
       APP_ENV: production
@@ -51,18 +98,42 @@ services:
       db:
         condition: service_healthy
     command: ["uv", "run", "--no-dev", "python", "-m", "app.worker"]
+    deploy:
+      resources:
+        limits: {memory: 320M}
+        reservations: {memory: 160M}
 
   web:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_URL: /api
+    image: ghcr.io/arthurpvn/pvn-finance-web:${TAG:-latest}
     restart: unless-stopped
+    # `dokploy-network` é como o Traefik chega aqui; `interna` é como o nginx
+    # deste container alcança a api. Sem porta publicada: nada deste stack fica
+    # exposto direto na internet.
+    networks: [interna, dokploy-network]
     depends_on:
       - api
-    # Publicado só no loopback — o nginx do host faz o proxy + TLS.
-    ports:
-      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    deploy:
+      resources:
+        limits: {memory: 64M}
+        reservations: {memory: 32M}
+
+networks:
+  # Rede privada do stack: banco e api só se enxergam aqui.
+  interna:
+  # Criada pelo instalador do Dokploy. `external` porque ela é do Traefik, não
+  # deste arquivo — declarar sem isso faria o Compose criar uma rede homônima
+  # prefixada pelo projeto, e o Traefik nunca alcançaria estes containers.
+  dokploy-network:
+    external: true
 
 volumes:
+  # EXTERNO e com o nome EXATO do que já existe na VPS. Volume gerenciado pelo
+  # compose recebe o nome do projeto como prefixo — se o Dokploy deployar com
+  # outro nome de projeto, o Postgres subiria com volume novo e VAZIO, e o
+  # sintoma seria "o sistema perdeu todos os dados", sem erro nenhum no log.
+  #
+  # Para recriar do zero num servidor novo:
+  #   docker volume create pvn-finance_pgdata
   pgdata:
+    external: true
+    name: pvn-finance_pgdata

@@ -1,17 +1,23 @@
 #!/usr/bin/env bash
 #
-# deploy.sh — sobe o Consolida (PVN Finance) em produção atrás do nginx do host.
+# deploy.sh — sobe o Consolida (PVN Finance) na mão, atrás do Traefik do Dokploy.
 #
 #   ./deploy.sh
+#
+# ⚠️ Em produção NÃO é este script que faz o deploy: é o DOKPLOY, disparado por
+#    merge na main (CI constrói → GHCR → Dokploy puxa). Isto aqui serve para
+#    subir a stack manualmente em emergência, e nada mais.
 #
 # O que faz:
 #   1. Confere pré-requisitos (docker + docker compose + openssl).
 #   2. Cria o .env a partir do .env.example na primeira execução.
 #   3. Gera segredos fortes (JWT_SECRET, VAULT_KEY, POSTGRES_PASSWORD) se ainda
 #      forem os placeholders — e NÃO os regenera nas próximas execuções.
-#   4. Faz build e sobe db + api + worker + web. Migrations rodam no boot.
-#      O `web` (nginx do SPA + proxy /api) é publicado em 127.0.0.1:WEB_PORT.
-#   5. Gera o server block do nginx do HOST (nginx-host.conf) com o seu DOMAIN.
+#   4. Puxa as imagens do GHCR e sobe db + api + worker + web, SEM compilar.
+#      Migrations rodam no boot da api. Nenhuma porta é publicada: quem alcança
+#      o `web` é o Traefik, pelo nome do container.
+#   5. Gera o server block do nginx do HOST (legado — hoje quem faz TLS e rota
+#      é o Traefik; o passo fica para quem ainda usa o fluxo antigo).
 #   6. Espera a API ficar saudável e mostra os próximos passos.
 #
 set -euo pipefail
@@ -114,10 +120,15 @@ if [ -z "$(get_env PLUGGY_CLIENT_ID)" ]; then
 fi
 
 # ---------------------------------------------------------------------------
-# 5. Build + up
+# 5. Pull + up (sem compilar)
 # ---------------------------------------------------------------------------
-info "Subindo a stack (build + up)… isso pode levar alguns minutos na 1ª vez."
-"${COMPOSE[@]}" up -d --build
+# `--no-build` e não `--build`: a VPS tem 4 GB e roda cinco projetos. Um build
+# de Vite ou de dependências Python pica em GB e aciona o OOM Killer, matando
+# processo de OUTRO projeto. Quem constrói é o GitHub Actions, que publica no
+# GHCR; aqui só se faz pull.
+info "Puxando as imagens do GHCR e subindo a stack…"
+"${COMPOSE[@]}" pull
+"${COMPOSE[@]}" up -d --no-build
 
 # ---------------------------------------------------------------------------
 # 6. Server block do nginx do host
