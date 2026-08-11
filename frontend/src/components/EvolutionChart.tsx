@@ -43,6 +43,7 @@ export function EvolutionChart({
 
   const onMove = (e: React.MouseEvent<HTMLDivElement>) => {
     const rect = e.currentTarget.getBoundingClientRect()
+    if (!rect.width) return // ainda sem layout (ex.: teste/jsdom) — evita NaN
     const frac = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width))
     setHover(Math.round(frac * (values.length - 1)))
   }

@@ -8,6 +8,7 @@ from uuid import UUID
 
 _ZERO = Decimal("0")
 _HUNDRED = Decimal("100")
+_TWELVE = Decimal("12")
 
 
 @dataclass(frozen=True, slots=True)
@@ -89,13 +90,25 @@ def is_variable_income(investment: Investment) -> bool:
     ).upper() == "REAL_ESTATE_FUND"
 
 
+def _fii_monthly_rate(investment: Investment) -> Decimal | None:
+    """Rentabilidade mensal (%) real do FII quando o Pluggy informa: usa a dos
+    últimos 12 meses (÷12) ou a anual (÷12). None se não vier nada, ou se for
+    ≤ 0 (mês negativo não vira 'renda' — melhor cair na estimativa positiva)."""
+    for annual in (investment.last_twelve_months_rate, investment.annual_rate):
+        if annual is not None and annual > _ZERO:
+            return annual / _TWELVE
+    return None
+
+
 def monthly_income(investment: Investment, fii_monthly_yield: Decimal) -> Decimal:
-    """Renda mensal estimada (R$) da posição que paga mensal (FII/ação):
-    saldo × dividend yield mensal. O Pluggy não entrega o provento, então é
-    estimativa. Zero para o que não paga mensal (ex.: CDB, que vence no prazo)."""
+    """Renda mensal estimada (R$) da posição que paga mensal (FII/ação): saldo ×
+    taxa mensal. Prefere a rentabilidade REAL que o Pluggy informa (produção);
+    só cai no dividend yield configurável quando o agregador não traz taxa
+    (ex.: sandbox). Zero para o que não paga mensal (ex.: CDB, que vence)."""
     if not is_variable_income(investment):
         return _ZERO
-    return investment.balance * fii_monthly_yield / _HUNDRED
+    monthly_pct = _fii_monthly_rate(investment) or fii_monthly_yield
+    return investment.balance * monthly_pct / _HUNDRED
 
 
 def total_monthly_income(
