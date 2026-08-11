@@ -104,6 +104,24 @@ export function ConfigPage() {
     }
   }
 
+  async function handleDeleteAccount() {
+    if (
+      !confirm(
+        'Isto apaga PERMANENTEMENTE sua conta e TODOS os dados (conexões, ' +
+          'transações, investimentos, credenciais). Não dá para desfazer. Continuar?',
+      )
+    )
+      return
+    if (prompt('Digite EXCLUIR para confirmar:') !== 'EXCLUIR') return
+    try {
+      await apiFetch('/me', { method: 'DELETE' })
+      toast.success('Conta e dados excluídos')
+      logout()
+    } catch {
+      toast.error('Falha ao excluir a conta')
+    }
+  }
+
   return (
     <div style={{ animation: 'fadeUp .32s ease', display: 'flex', flexDirection: 'column', gap: 18, width: '100%', maxWidth: 880 }}>
       <div style={{ ...display, fontSize: 26 }}>Configurações</div>
@@ -171,6 +189,18 @@ export function ConfigPage() {
         <div style={{ fontSize: 12.5, color: 'var(--ink-soft)' }}>
           Moeda: <b style={{ color: 'var(--ink)' }}>Real (R$)</b> · Idioma: Português
         </div>
+      </Card>
+
+      <Card style={{ display: 'flex', flexDirection: 'column', gap: 12, border: '1.5px solid var(--danger)' }}>
+        <span style={{ fontWeight: 700, fontSize: 16, color: 'var(--danger)' }}>Zona de perigo</span>
+        <div style={{ fontSize: 12.5, color: 'var(--ink-soft)', lineHeight: 1.5 }}>
+          Excluir a conta apaga <b style={{ color: 'var(--ink)' }}>permanentemente</b> todos os
+          seus dados — conexões, contas, transações, investimentos e credenciais Pluggy.
+          Ação irreversível (LGPD).
+        </div>
+        <button onClick={handleDeleteAccount} className="u-ghost" style={{ alignSelf: 'flex-start', ...dangerBtn, padding: '9px 16px', fontSize: 13 }}>
+          <IconTrash size={14} /> excluir minha conta e dados
+        </button>
       </Card>
 
       <button onClick={logout} className="u-ghost" style={{ alignSelf: 'flex-start', cursor: 'pointer', fontFamily: 'var(--sans)', fontWeight: 600, fontSize: 13.5, padding: '11px 18px', border: '1.5px solid var(--line-2)', borderRadius: 11, background: 'var(--panel)', color: 'var(--danger)', display: 'flex', alignItems: 'center', gap: 8 }}>

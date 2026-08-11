@@ -165,6 +165,19 @@ def test_monthly_income_zero_for_fixed_income() -> None:
     assert monthly_income(cdb, _FII_YIELD) == Decimal("0")
 
 
+def test_monthly_income_prefers_real_rate_over_yield() -> None:
+    # FII com rentabilidade anual real de 12% → 1%/mês → 1000 × 1% = 10 (não o
+    # yield estimado de 0,7%).
+    fii = _fixed("1000", type_="EQUITY", annual_rate="12")
+    assert monthly_income(fii, _FII_YIELD) == Decimal("10.00")
+
+
+def test_monthly_income_falls_back_to_yield_when_rate_nonpositive() -> None:
+    # Rentabilidade negativa (mês ruim) não vira "renda" → cai no yield.
+    fii = _fixed("1000", type_="EQUITY", annual_rate="-6")
+    assert monthly_income(fii, _FII_YIELD) == Decimal("7.00")
+
+
 def test_profit_from_original_and_total() -> None:
     a = _fixed("1100", amount_original="1000")
     b = _fixed("500", amount_original="520")  # prejuízo
