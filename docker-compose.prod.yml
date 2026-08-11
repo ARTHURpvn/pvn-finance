@@ -21,6 +21,18 @@
 
 x-api-imagem: &api-imagem
   image: ghcr.io/arthurpvn/pvn-finance-api:${TAG:-latest}
+  # `always` NÃO é zelo: sem isto, um deploy que muda só CÓDIGO é um no-op
+  # SILENCIOSO. O Dokploy roda `docker compose up -d` sem `pull`, e como
+  # `:latest` é referência MUTÁVEL, o Compose vê o mesmo nome de imagem, conclui
+  # que nada mudou e não recria container nenhum. O deploy fica verde de ponta a
+  # ponta — CI, GHCR, painel — e a produção segue no código velho.
+  #
+  # Aconteceu no echoesLab e no bot em 2026-08-11: dois PRs mergeados, imagens
+  # publicadas, repositório na VPS no commit certo, e o código antigo rodando.
+  # Só apareceu ao olhar DENTRO do container. Aqui ainda não tinha mordido
+  # porque todo deploy até agora mexeu neste arquivo, o que força a recriação
+  # por outro motivo.
+  pull_policy: always
 
 # Escrito pelo Dokploy a partir do Environment do painel, ao lado deste arquivo.
 # Precisa ser declarado: sem `env_file` o Compose lê o `.env` apenas para
@@ -105,6 +117,8 @@ services:
 
   web:
     image: ghcr.io/arthurpvn/pvn-finance-web:${TAG:-latest}
+    # Ver a nota em `x-api-imagem`: sem isto, deploy de código puro é no-op.
+    pull_policy: always
     restart: unless-stopped
     # `dokploy-network` é como o Traefik chega aqui; `interna` é como o nginx
     # deste container alcança a api. Sem porta publicada: nada deste stack fica
